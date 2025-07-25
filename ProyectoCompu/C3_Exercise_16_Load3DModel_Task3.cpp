@@ -85,9 +85,9 @@ int main()
 
     // load models
     // -----------
-    //Model ourModel(FileSystem::getPath("resources/objects/backpack/backpack.obj"));
-    Model ourModel("C:/Users/Salma Morales/Documents/Quinto_Semestre_2025/Computacion Grafica/ProyectoCompu/ProyectoCompu/models/blackhole/blackhole.obj");
-    //Model ourModel("model/backpack/backpack.obj");
+    //Model ourModel(FileSystem::getPath("resources/objects/blackhole/blackhole.obj"));
+    Model ourModel("models/blackhole/blackhole.obj");
+    //Model ourModel("model/backpack/blackhole.obj");
 
     // draw in wireframe
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
