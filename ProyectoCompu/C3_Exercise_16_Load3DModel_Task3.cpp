@@ -113,6 +113,7 @@ int main()
     Model ourModel("models/FantastiCar+Herbie/FantastiCar+Herbie.obj");
     Model asteroidModel("models/asteroid/asteroid01.obj");
 
+
     while (!glfwWindowShouldClose(window))
     {
         float currentFrame = glfwGetTime();
