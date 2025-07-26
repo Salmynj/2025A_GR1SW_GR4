@@ -1,4 +1,4 @@
-#include <glad/glad.h>
+﻿#include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
 #include <glm/glm.hpp>
@@ -10,22 +10,29 @@
 #include <learnopengl/model.h>
 
 #include <iostream>
+#include <vector>
+#include <cstdlib>
+#include <ctime>
+#include <algorithm>
 
 #define STB_IMAGE_IMPLEMENTATION 
 #include <learnopengl/stb_image.h>
 
-
+// Callbacks
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window);
+void spawnAsteroid();
+bool checkCollision(const glm::vec3& a, const glm::vec3& b, float threshold = 0.8f);
 
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
 // camera
-Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+Camera camera(glm::vec3(0.0f, 2.0f, 5.0f));
+glm::vec3 cameraTargetPos = camera.Position;
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
@@ -34,25 +41,57 @@ bool firstMouse = true;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
+// carriles y carro
+std::vector<float> lanePositions = { -2.0f, 0.0f, 2.0f };
+int currentLane = 1;
+glm::vec3 carPosition = glm::vec3(0.0f);
+glm::vec3 carDirection = glm::vec3(0.0f, 0.0f, -1.0f);
+float carYaw = 0.0f;
+float carSpeed = 5.0f;
+bool gameOver = false;
+bool rPressed = false;
+
+// asteroides
+struct Asteroid {
+    glm::vec3 position;
+    float speed;
+};
+std::vector<Asteroid> asteroids;
+float asteroidSpawnTimer = 0.0f;
+float spawnInterval = 1.0f;
+
+void spawnAsteroid() {
+    std::vector<glm::vec3> spawnPositions = {
+        glm::vec3(0.0f, 0.0f, -100.0f),
+        glm::vec3(-2.0f, 0.0f, -100.0f),
+        glm::vec3(2.0f, 0.0f, -100.0f)
+    };
+    int index = rand() % 3;
+    Asteroid a;
+    a.position = spawnPositions[index];
+    a.speed = 20.0f;
+    asteroids.push_back(a);
+}
+
+bool checkCollision(const glm::vec3& a, const glm::vec3& b, float threshold) {
+    return glm::distance(a, b) < threshold;
+}
+
 int main()
 {
-    // glfw: initialize and configure
-    // ------------------------------
+    srand(static_cast<unsigned int>(time(0)));
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
-    // glfw window creation
-    // --------------------
-    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Exercise 16 Task 3", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "FantastiCar", NULL, NULL);
     if (window == NULL)
     {
-        std::cout << "Failed to create GLFW window" << std::endl;
+        std::cout << "Failed to create GLFW window\n";
         glfwTerminate();
         return -1;
     }
@@ -60,136 +99,149 @@ int main()
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetScrollCallback(window, scroll_callback);
-
-    // tell GLFW to capture our mouse
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-    // glad: load all OpenGL function pointers
-    // ---------------------------------------
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
-        std::cout << "Failed to initialize GLAD" << std::endl;
+        std::cout << "Failed to initialize GLAD\n";
         return -1;
     }
 
-    // tell stb_image.h to flip loaded texture's on the y-axis (before loading model).
-    //stbi_set_flip_vertically_on_load(true);
-
-    // configure global opengl state
-    // -----------------------------
     glEnable(GL_DEPTH_TEST);
-
-    // build and compile shaders
-    // -------------------------
     Shader ourShader("shaders/shader_exercise16_mloading.vs", "shaders/shader_exercise16_mloading.fs");
 
-    // load models
-    // -----------
-    //Model ourModel(FileSystem::getPath("resources/objects/blackhole/blackhole.obj"));
-    Model ourModel("models/blackhole/blackhole.obj");
-    //Model ourModel("model/backpack/blackhole.obj");
+    Model ourModel("models/FantastiCar+Herbie/FantastiCar+Herbie.obj");
+    Model asteroidModel("models/asteroid/asteroid01.obj");
 
-    // draw in wireframe
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-    camera.MovementSpeed = 2.5; //Optional. Modify the speed of the camera
-
-    // render loop
-    // -----------
     while (!glfwWindowShouldClose(window))
     {
-        // per-frame time logic
-        // --------------------
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        // input
-        // -----
         processInput(window);
 
-        // render
-        // ------
-        glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
+        float radians = glm::radians(carYaw);
+        carDirection = glm::vec3(sin(radians), 0.0f, -cos(radians));
+
+        glm::vec3 desiredCameraPos = carPosition + glm::normalize(-carDirection) * 1.5f + glm::vec3(0.0f, 0.4f, 0.0f);
+        cameraTargetPos = glm::mix(cameraTargetPos, desiredCameraPos, 3.0f * deltaTime);
+        camera.Position = cameraTargetPos;
+        camera.Front = glm::normalize((carPosition + glm::vec3(0.0f, 0.3f, -1.2f)) - camera.Position);
+
+        glClearColor(0.1f, 0.12f, 0.15f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // don't forget to enable shader before setting uniforms
         ourShader.use();
-
-        // view/projection transformations
-        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 100.0f);
         glm::mat4 view = camera.GetViewMatrix();
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", view);
 
-        // render the loaded model
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
-        model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));	// it's a bit too big for our scene, so scale it down
-        ourShader.setMat4("model", model);
-        ourModel.Draw(ourShader);
+        if (!gameOver) {
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::translate(model, carPosition);
+            model = glm::rotate(model, glm::radians(carYaw + 180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+            model = glm::scale(model, glm::vec3(0.1f));
+            ourShader.setMat4("model", model);
+            ourModel.Draw(ourShader);
+        }
 
+        asteroidSpawnTimer += deltaTime;
+        if (asteroidSpawnTimer >= spawnInterval && !gameOver) {
+            spawnAsteroid();
+            asteroidSpawnTimer = 0.0f;
+        }
 
-        // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
-        // -------------------------------------------------------------------------------
+        if (!gameOver) {
+            for (const Asteroid& ast : asteroids) {
+                if (checkCollision(carPosition, ast.position)) {
+                    gameOver = true;
+                    break;
+                }
+            }
+        }
+        else {
+            if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && !rPressed) {
+                gameOver = false;
+                carPosition = glm::vec3(0.0f);
+                currentLane = 1;
+                asteroids.clear();
+                asteroidSpawnTimer = 0.0f;
+                rPressed = true;
+            }
+            if (glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE)
+                rPressed = false;
+        }
+
+        for (int i = 0; i < asteroids.size(); ++i) {
+            asteroids[i].position.z += asteroids[i].speed * deltaTime;
+            glm::mat4 asteroidM = glm::mat4(1.0f);
+            asteroidM = glm::translate(asteroidM, asteroids[i].position);
+            asteroidM = glm::scale(asteroidM, glm::vec3(0.007f));
+            ourShader.setMat4("model", asteroidM);
+            asteroidModel.Draw(ourShader);
+        }
+
+        asteroids.erase(
+            std::remove_if(asteroids.begin(), asteroids.end(),
+                [](const Asteroid& a) { return a.position.z > 10.0f; }),
+            asteroids.end()
+        );
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
-    // glfw: terminate, clearing all previously allocated GLFW resources.
-    // ------------------------------------------------------------------
     glfwTerminate();
     return 0;
 }
 
-// process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
-// ---------------------------------------------------------------------------------------------------------
 void processInput(GLFWwindow* window)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
+    if (gameOver) return;
+
+    static bool aPressed = false;
+    static bool dPressed = false;
+
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS && !aPressed) {
+        if (currentLane > 0) currentLane--;
+        aPressed = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_RELEASE) aPressed = false;
+
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS && !dPressed) {
+        if (currentLane < 2) currentLane++;
+        dPressed = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_RELEASE) dPressed = false;
+
+    carPosition.x = glm::mix(carPosition.x, lanePositions[currentLane], 10.0f * deltaTime);
+
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        camera.ProcessKeyboard(FORWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        camera.ProcessKeyboard(BACKWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        camera.ProcessKeyboard(LEFT, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        camera.ProcessKeyboard(RIGHT, deltaTime);
+        carPosition.z -= carSpeed * deltaTime;
 }
 
-// glfw: whenever the window size changed (by OS or user resize) this callback function executes
-// ---------------------------------------------------------------------------------------------
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
-    // make sure the viewport matches the new window dimensions; note that width and 
-    // height will be significantly larger than specified on retina displays.
     glViewport(0, 0, width, height);
 }
 
-// glfw: whenever the mouse moves, this callback is called
-// -------------------------------------------------------
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
-    if (firstMouse)
-    {
+    if (firstMouse) {
         lastX = xpos;
         lastY = ypos;
         firstMouse = false;
     }
-
-    float xoffset = xpos - lastX;
-    float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
-
     lastX = xpos;
     lastY = ypos;
-
-    camera.ProcessMouseMovement(xoffset, yoffset);
 }
 
-// glfw: whenever the mouse scroll wheel scrolls, this callback is called
-// ----------------------------------------------------------------------
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
     camera.ProcessMouseScroll(yoffset);

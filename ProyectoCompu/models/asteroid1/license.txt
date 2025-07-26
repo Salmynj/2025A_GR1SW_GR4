@@ -1,0 +1,11 @@
+Model Information:
+* title:	Asteroid 01
+* source:	https://sketchfab.com/3d-models/asteroid-01-df95d3da67aa4c769ec81394e0b0ffef
+* author:	exabyte (https://sketchfab.com/Oziry)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Asteroid 01" (https://sketchfab.com/3d-models/asteroid-01-df95d3da67aa4c769ec81394e0b0ffef) by exabyte (https://sketchfab.com/Oziry) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
