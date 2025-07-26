@@ -75,6 +75,7 @@ int main()
     Shader ourShader("shaders/shader_exercise16_mloading.vs", "shaders/shader_exercise16_mloading.fs");
     Model ourModel("C:/Users/ASUS/source/repos/ProyectoCompu/ProyectoCompu/models/FantastiCar+Herbie/FantastiCar+Herbie.obj");
 
+
     while (!glfwWindowShouldClose(window))
     {
         // tiempo por frame
