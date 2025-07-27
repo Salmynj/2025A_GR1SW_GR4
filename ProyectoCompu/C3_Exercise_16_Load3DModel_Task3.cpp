@@ -51,6 +51,9 @@ float carSpeed = 5.0f;
 bool gameOver = false;
 bool rPressed = false;
 
+//Galactus rotacion 
+float galactusRotation = 0.0f;
+
 // asteroides
 struct Asteroid {
     glm::vec3 position;
@@ -112,7 +115,7 @@ int main()
 
     Model ourModel("models/FantastiCar+Herbie/FantastiCar+Herbie.obj");
     Model asteroidModel("models/asteroid/asteroid01.obj");
-
+	Model galactusModel("models/Galactus/Galactus.obj");
 
     while (!glfwWindowShouldClose(window))
     {
@@ -147,6 +150,14 @@ int main()
             ourShader.setMat4("model", model);
             ourModel.Draw(ourShader);
         }
+
+		//Galactus
+		glm::mat4 galactusModelMatrix = glm::mat4(1.0f);
+		galactusModelMatrix = glm::translate(galactusModelMatrix, glm::vec3(0.0f, -96.0f, -40.0f));
+		galactusModelMatrix = glm::rotate(galactusModelMatrix, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		galactusModelMatrix = glm::scale(galactusModelMatrix, glm::vec3(40.0f));
+		ourShader.setMat4("model", galactusModelMatrix);
+        galactusModel.Draw(ourShader);
 
         asteroidSpawnTimer += deltaTime;
         if (asteroidSpawnTimer >= spawnInterval && !gameOver) {
