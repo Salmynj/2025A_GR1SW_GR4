@@ -66,8 +66,6 @@ float headRotationAngle = 0.0f;
 float headRotationSpeed = 5.0f;
 float headRotationLimit = 20.0f;
 
-// PANTALLAS ANIMADAS COMENTADAS - Descomenta para usar las animaciones completas
-/*
 // Variables para animación de StartScreen en pantalla de inicio
 std::vector<Model*> startScreenFrames;
 int currentStartScreenFrame = 0;
@@ -85,7 +83,6 @@ std::vector<Model*> winFrames;
 int currentWinFrame = 0;
 float winAnimationTimer = 0.0f;
 float winFrameRate = 24.0f; // 24 fps
-*/
 
 // Variables para audio
 ALCdevice* audioDevice = nullptr;
@@ -113,6 +110,22 @@ ALuint winSoundBuffer = 0;
 ALuint loseSoundBuffer = 0;
 float gameEndDelay = 1.5f; // 1.5 segundos de retraso
 bool endSoundPlayed = false;
+
+// Texturas para las pantallas iniciales
+unsigned int studioTexture, logoTexture;
+
+// Sonidos iniciales
+ALuint studioSoundBuffer;
+ALuint logoSoundBuffer;
+ALuint studioSoundSource;
+ALuint logoSoundSource;
+
+// Variables de control para las pantallas iniciales
+bool showStudio = true;
+bool showLogo = false;
+float studioTimer = 0.0f;
+float logoTimer = 0.0f;
+
 
 bool LoadWavFile(const char* filename, std::vector<char>& buffer, ALenum& format, ALsizei& freq) {
     std::ifstream file(filename, std::ios::binary);
@@ -217,6 +230,40 @@ void playEndGameSound(bool won) {
     alSourcef(source, AL_GAIN, 0.8f);
     alSourcePlay(source);
 }
+//Funcion para cargar texturas
+unsigned int loadTexture(const char* path) {
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+
+    int width, height, nrComponents;
+    unsigned char* data = stbi_load(path, &width, &height, &nrComponents, 0);
+    if (data) {
+        GLenum format;
+        if (nrComponents == 1)
+            format = GL_RED;
+        else if (nrComponents == 3)
+            format = GL_RGB;
+        else if (nrComponents == 4)
+            format = GL_RGBA;
+
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        stbi_image_free(data);
+    }
+    else {
+        std::cout << "Texture failed to load at path: " << path << std::endl;
+        stbi_image_free(data);
+    }
+
+    return textureID;
+}
 
 std::vector<Asteroid> asteroids;
 float asteroidSpawnTimer = 0.0f;
@@ -275,8 +322,6 @@ int main() {
     Model galactusHeadModel("models/Galactus/GalactusCabeza.obj");
     Model nebulaModel("models/nebula/nebula.obj");
 
-    // CARGA DE PANTALLAS ANIMADAS COMENTADA - Descomenta para usar las animaciones completas
-    /*
     // Cargar frames de animación de StartScreen para pantalla de inicio
     startScreenFrames.resize(20);
     for (int i = 0; i < 20; i++) {
@@ -318,7 +363,6 @@ int main() {
             winFrames[i] = nullptr;
         }
     }
-    */
 
     //Música
     // Inicialización OpenAL
@@ -471,12 +515,6 @@ int main() {
             camera.Position = glm::vec3(0.0f, 0.75f, 1.3f);
             camera.Front = glm::normalize(glm::vec3(0.0f, 0.0f, -1.0f));
 
-            // PANTALLA DE INICIO SIMPLIFICADA
-            // Texto simple en lugar de animación
-            std::cout << "Presiona R para iniciar el juego" << std::endl;
-
-            // ANIMACIÓN COMENTADA - Descomenta para usar la animación completa
-            /*
             // Animación de StartScreen en pantalla de inicio
             startScreenAnimationTimer += deltaTime;
             float frameTime = 1.0f / startScreenFrameRate;
@@ -493,7 +531,6 @@ int main() {
                 ourShader.setMat4("model", startScreenM);
                 startScreenFrames[currentStartScreenFrame]->Draw(ourShader);
             }
-            */
 
             if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && !rPressed) {
                 gameStarted = true;
@@ -507,7 +544,8 @@ int main() {
         }
 
 
-        // PANTALLAS DE FINAL SIMPLIFICADAS
+        // En el bucle principal, reemplaza los dos bloques de gameOver/win por este único bloque:
+
         if (gameOver || win) {
             gameOverTimer += deltaTime;
 
@@ -523,21 +561,11 @@ int main() {
                 }
             }
 
-            // Mostrar pantalla después del retraso (simplificada)
+            // Mostrar pantalla después del retraso
             if (gameOverTimer >= gameEndDelay) {
                 camera.Position = glm::vec3(0.0f, 0.75f, 1.3f);
                 camera.Front = glm::normalize(glm::vec3(0.0f, 0.0f, -1.0f));
 
-                // Mensajes simples en lugar de animaciones
-                if (gameOver) {
-                    std::cout << "GAME OVER - Presiona R para reiniciar" << std::endl;
-                }
-                else {
-                    std::cout << "¡VICTORIA! - Presiona R para jugar de nuevo" << std::endl;
-                }
-
-                // ANIMACIONES COMENTADAS - Descomenta para usar las animaciones completas
-                /*
                 if (gameOver) {
                     // Animación de GameOver
                     gameOverAnimationTimer += deltaTime;
@@ -574,7 +602,6 @@ int main() {
                         winFrames[currentWinFrame]->Draw(ourShader);
                     }
                 }
-                */
             }
 
             // Reiniciar juego
@@ -589,9 +616,6 @@ int main() {
                 asteroidSpawnTimer = 0.0f;
                 gameOverTimer = 0.0f;
                 rPressed = true;
-
-                // REINICIO DE ANIMACIONES COMENTADO - Descomenta si usas las animaciones
-                /*
                 // Reiniciar animación de StartScreen
                 currentStartScreenFrame = 0;
                 startScreenAnimationTimer = 0.0f;
@@ -601,7 +625,6 @@ int main() {
                 // Reiniciar animación de Win
                 currentWinFrame = 0;
                 winAnimationTimer = 0.0f;
-                */
 
                 // Restaurar música de juego
                 playMusic(1, true);
@@ -691,8 +714,6 @@ int main() {
         glfwPollEvents();
     }
 
-    // LIMPIEZA DE MEMORIA COMENTADA - Descomenta si usas las animaciones
-    /*
     // Limpiar memoria de los frames de StartScreen
     for (Model* model : startScreenFrames) {
         if (model != nullptr) {
@@ -716,7 +737,6 @@ int main() {
         }
     }
     winFrames.clear();
-    */
 
     glfwTerminate();
     return 0;
@@ -740,7 +760,7 @@ void processInput(GLFWwindow* window) {
 
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS && !dPressed) {
         if (currentLane < 2) currentLane++;
-        playDodgeSound(); // Reproducir sonido al esquivar a la derecha
+        playDodgeSound(); // Reproducir sonido al esquivar a la izquierda
         dPressed = true;
     }
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_RELEASE) dPressed = false;
