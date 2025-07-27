@@ -118,6 +118,7 @@ int main() {
     Model galactusModel("models/Galactus/GalactusCuerpo.obj");
     Model galactusHeadModel("models/Galactus/GalactusCabeza.obj");
     Model winModel("models/Win/Win.obj");
+    Model nebulaModel("models/nebula/nebula.obj");
 
     while (!glfwWindowShouldClose(window)) {
         float currentFrame = glfwGetTime();
@@ -130,10 +131,18 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         ourShader.use();
-        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 100.0f);
+        
+        glm::mat4 nebulaM = glm::mat4(1.0f);
+        nebulaM = glm::translate(nebulaM, glm::vec3(0.0f, 0.0f, 0.0f));
+        nebulaM = glm::scale(nebulaM, glm::vec3(150.0f, 150.0f, 150.0f));
+        ourShader.setMat4("model",nebulaM); 
+        nebulaModel.Draw(ourShader);
+
+        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 200.0f);
         glm::mat4 view = camera.GetViewMatrix();
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", view);
+        
 
         if (!gameStarted) {
             camera.Position = glm::vec3(0.0f, 0.75f, 1.3f);
