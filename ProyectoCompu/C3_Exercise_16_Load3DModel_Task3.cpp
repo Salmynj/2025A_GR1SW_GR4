@@ -1,5 +1,3 @@
-// Código final: al llegar al trigger invisible frente a Galactus se gana, se muestra Win.obj y se congela el carro
-
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -17,6 +15,9 @@
 #include <ctime>
 #include <algorithm>
 
+#include <AL/al.h>
+#include <AL/alc.h>
+
 #define STB_IMAGE_IMPLEMENTATION
 #include <learnopengl/stb_image.h>
 
@@ -26,6 +27,11 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window);
 void spawnAsteroid();
 bool checkCollision(const glm::vec3& a, const glm::vec3& b, float threshold = 0.8f);
+bool LoadWavFile(const char* filename, std::vector<char>& buffer, ALenum& format, ALsizei& freq);
+void playMusic(int musicIndex, bool loop);
+void stopMusic();
+void updateAudio();
+
 
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
@@ -39,26 +45,154 @@ bool firstMouse = true;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
+
 std::vector<float> lanePositions = { -2.0f, 0.0f, 2.0f };
 int currentLane = 1;
 glm::vec3 carPosition = glm::vec3(0.0f);
 glm::vec3 carDirection = glm::vec3(0.0f, 0.0f, -1.0f);
 float carYaw = 0.0f;
 float carSpeed = 5.0f;
+//Estados del juego
 bool gameOver = false;
 bool win = false;
 bool rPressed = false;
 bool gameStarted = false;
 float gameOverTimer = 0.0f;
-
+// Variables para Galactus
 float headRotationAngle = 0.0f;
 float headRotationSpeed = 5.0f;
 float headRotationLimit = 20.0f;
 
+// Variables para audio
+ALCdevice* audioDevice = nullptr;
+ALCcontext* audioContext = nullptr;
+
+// Música
+ALuint musicBuffers[4]; // 0:inicio, 1:juego, 2:gameover, 3:victoria
+ALuint musicSource;
+int currentMusic = -1;
+bool musicLooping = false;
+
+//Esquivación
+ALuint dodgeSoundBuffer = 0;
+std::vector<ALuint> dodgeSoundSources;
+float lastDodgeTime = 0.0f;
+float dodgeSoundCooldown = 0.2f;
+
+//Aceleración
+ALuint accelerationSoundBuffer = 0;
+ALuint accelerationSoundSource = 0;
+bool isAccelerating = false;
+
+//Grito al perder y ganar
+ALuint winSoundBuffer = 0;
+ALuint loseSoundBuffer = 0;
+float gameEndDelay = 1.5f; // 1.5 segundos de retraso
+bool endSoundPlayed = false;
+
+bool LoadWavFile(const char* filename, std::vector<char>& buffer, ALenum& format, ALsizei& freq) {
+    std::ifstream file(filename, std::ios::binary);
+    if (!file) return false;
+
+    char riff[4];
+    file.read(riff, 4);
+    if (std::strncmp(riff, "RIFF", 4) != 0) return false;
+
+    file.seekg(22, std::ios::beg);
+    short channels;
+    file.read(reinterpret_cast<char*>(&channels), 2);
+
+    file.read(reinterpret_cast<char*>(&freq), 4);
+
+    file.seekg(34, std::ios::beg);
+    short bitsPerSample;
+    file.read(reinterpret_cast<char*>(&bitsPerSample), 2);
+
+    char dataHeader[4];
+    int dataSize = 0;
+    while (file.read(dataHeader, 4)) {
+        file.read(reinterpret_cast<char*>(&dataSize), 4);
+        if (std::strncmp(dataHeader, "data", 4) == 0) break;
+        file.seekg(dataSize, std::ios::cur);
+    }
+    if (dataSize == 0) return false;
+
+    buffer.resize(dataSize);
+    file.read(buffer.data(), dataSize);
+
+    if (channels == 1) {
+        format = (bitsPerSample == 8) ? AL_FORMAT_MONO8 : AL_FORMAT_MONO16;
+    }
+    else {
+        format = (bitsPerSample == 8) ? AL_FORMAT_STEREO8 : AL_FORMAT_STEREO16;
+    }
+    return true;
+}
+
+// Control de música
+void playMusic(int musicIndex, bool loop) {
+    if (musicIndex < 0 || musicIndex >= 4) return;
+    if (!musicBuffers[musicIndex]) return;
+
+    alSourceStop(musicSource);
+    alSourcei(musicSource, AL_BUFFER, musicBuffers[musicIndex]);
+    alSourcei(musicSource, AL_LOOPING, loop ? AL_TRUE : AL_FALSE);
+    alSourcePlay(musicSource);
+    currentMusic = musicIndex;
+    musicLooping = loop;
+}
+
+void stopMusic() {
+    alSourceStop(musicSource);
+    currentMusic = -1;
+}
 struct Asteroid {
     glm::vec3 position;
     float speed;
 };
+
+// Función para reproducir sonido de esquivación
+void playDodgeSound() {
+    float currentTime = glfwGetTime();
+    if (currentTime - lastDodgeTime < dodgeSoundCooldown) return;
+
+    ALuint source;
+    alGenSources(1, &source);
+    alSourcei(source, AL_BUFFER, dodgeSoundBuffer);
+    alSourcef(source, AL_GAIN, 0.6f); 
+    alSourcePlay(source);
+    dodgeSoundSources.push_back(source);
+    lastDodgeTime = currentTime;
+}
+
+
+// Función para manejar el sonido de aceleración
+void handleAccelerationSound(bool accelerating) {
+    if (accelerating && !isAccelerating) {
+        // Comenzar a acelerar
+        alSourcei(accelerationSoundSource, AL_BUFFER, accelerationSoundBuffer);
+        alSourcei(accelerationSoundSource, AL_LOOPING, AL_TRUE);
+        alSourcePlay(accelerationSoundSource);
+        isAccelerating = true;
+    }
+    else if (!accelerating && isAccelerating) {
+        // Dejar de acelerar
+        alSourceStop(accelerationSoundSource);
+        isAccelerating = false;
+    }
+}
+
+// Función para reproducir sonidos de final
+void playEndGameSound(bool won) {
+    ALuint buffer = won ? winSoundBuffer : loseSoundBuffer;
+    if (buffer == 0) return;
+
+    ALuint source;
+    alGenSources(1, &source);
+    alSourcei(source, AL_BUFFER, buffer);
+    alSourcef(source, AL_GAIN, 0.8f);
+    alSourcePlay(source);
+}
 
 std::vector<Asteroid> asteroids;
 float asteroidSpawnTimer = 0.0f;
@@ -120,6 +254,97 @@ int main() {
     Model winModel("models/Win/Win.obj");
     Model nebulaModel("models/nebula/nebula.obj");
 
+    //Música
+    // Inicialización OpenAL
+    audioDevice = alcOpenDevice(nullptr);
+    if (!audioDevice) {
+        std::cerr << "Error al abrir dispositivo de audio" << std::endl;
+        return -1;
+    }
+
+    audioContext = alcCreateContext(audioDevice, nullptr);
+    if (!audioContext || !alcMakeContextCurrent(audioContext)) {
+        std::cerr << "Error al crear contexto de audio" << std::endl;
+        return -1;
+    }
+
+    // Cargar música
+    const char* musicFiles[4] = {
+        "audio/Lobby.wav",
+        "audio/InGame.wav",
+        "audio/Lose.wav",
+        "audio/Win.wav"
+    };
+
+    for (int i = 0; i < 4; i++) {
+        std::vector<char> bufferData;
+        ALenum format;
+        ALsizei freq;
+
+        if (!LoadWavFile(musicFiles[i], bufferData, format, freq)) {
+            std::cout << "Error cargando: " << musicFiles[i] << std::endl;
+            musicBuffers[i] = 0;
+        }
+        else {
+            alGenBuffers(1, &musicBuffers[i]);
+            alBufferData(musicBuffers[i], format, bufferData.data(), (ALsizei)bufferData.size(), freq);
+        }
+    }
+
+    alGenSources(1, &musicSource);
+    alSourcef(musicSource, AL_GAIN, 0.7f);
+
+	// Sonido de esquivación
+    std::vector<char> dodgeData;
+    ALenum dodgeFormat;
+    ALsizei dodgeFreq;
+    if (!LoadWavFile("audio/Esquiva.wav", dodgeData, dodgeFormat, dodgeFreq)) {
+        std::cout << "Error cargando sonido de esquivación" << std::endl;
+    }
+    else {
+        alGenBuffers(1, &dodgeSoundBuffer);
+        alBufferData(dodgeSoundBuffer, dodgeFormat, dodgeData.data(), (ALsizei)dodgeData.size(), dodgeFreq);
+    }
+
+    // Cargar sonido de aceleración
+    std::vector<char> accelerationData;
+    ALenum accelerationFormat;
+    ALsizei accelerationFreq;
+    if (!LoadWavFile("audio/Speed.wav", accelerationData, accelerationFormat, accelerationFreq)) {
+        std::cout << "Error cargando sonido de aceleración" << std::endl;
+    }
+    else {
+        alGenBuffers(1, &accelerationSoundBuffer);
+        alBufferData(accelerationSoundBuffer, accelerationFormat, accelerationData.data(),
+            (ALsizei)accelerationData.size(), accelerationFreq);
+        alGenSources(1, &accelerationSoundSource);
+        alSourcef(accelerationSoundSource, AL_GAIN, 6.0f);
+    }
+
+
+    // Cargar sonidos de final
+    std::vector<char> winSoundData, loseSoundData;
+    ALenum winFormat, loseFormat;
+    ALsizei winFreq, loseFreq;
+
+    if (!LoadWavFile("audio/Yei.wav", winSoundData, winFormat, winFreq)) {
+        std::cout << "Error cargando sonido de celebración" << std::endl;
+    }
+    else {
+        alGenBuffers(1, &winSoundBuffer);
+        alBufferData(winSoundBuffer, winFormat, winSoundData.data(),
+            (ALsizei)winSoundData.size(), winFreq);
+    }
+
+    if (!LoadWavFile("audio/Scream.wav", loseSoundData, loseFormat, loseFreq)) {
+        std::cout << "Error cargando sonido de game over" << std::endl;
+    }
+    else {
+        alGenBuffers(1, &loseSoundBuffer);
+        alBufferData(loseSoundBuffer, loseFormat, loseSoundData.data(),
+            (ALsizei)loseSoundData.size(), loseFreq);
+    }
+
     while (!glfwWindowShouldClose(window)) {
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
@@ -143,7 +368,39 @@ int main() {
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", view);
         
+        // Control de música basado en el estado del juego
+        if (!gameStarted) {
+            if (currentMusic != 0) playMusic(0, true); // Música de inicio en loop
+        }
+        else if (gameOver) {
+            if (currentMusic != 2) playMusic(2, false); // Música de game over (sin loop)
+        }
+        else if (win) {
+            if (currentMusic != 3) playMusic(3, false); // Música de victoria (sin loop)
+        }
+        else {
+            if (currentMusic != 1) playMusic(1, true); // Música de juego en loop
+        }
 
+        // Actualizar sonido de aceleración
+        bool accelerating = glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS;
+        handleAccelerationSound(accelerating);
+
+
+        // Limpiar fuentes de sonido de esquivación que ya terminaron
+        for (auto it = dodgeSoundSources.begin(); it != dodgeSoundSources.end(); ) {
+            ALint state;
+            alGetSourcei(*it, AL_SOURCE_STATE, &state);
+            if (state != AL_PLAYING) {
+                alDeleteSources(1, &(*it));
+                it = dodgeSoundSources.erase(it);
+            }
+            else {
+                ++it;
+            }
+        }
+
+		
         if (!gameStarted) {
             camera.Position = glm::vec3(0.0f, 0.75f, 1.3f);
             camera.Front = glm::normalize(glm::vec3(0.0f, 0.0f, -1.0f));
@@ -163,37 +420,66 @@ int main() {
             continue;
         }
 
+       
+        // En el bucle principal, reemplaza los dos bloques de gameOver/win por este único bloque:
+
         if (gameOver || win) {
             gameOverTimer += deltaTime;
-            if (gameOverTimer >= 0.1f) {
+
+            // Reproducir sonido solo una vez al inicio
+            if (gameOverTimer >= 0.1f && !endSoundPlayed) {
+                playEndGameSound(win);
+                endSoundPlayed = true;
+
+                // Detener sonido de aceleración si está activo
+                if (isAccelerating) {
+                    alSourceStop(accelerationSoundSource);
+                    isAccelerating = false;
+                }
+            }
+
+            // Mostrar pantalla después del retraso
+            if (gameOverTimer >= gameEndDelay) {
                 camera.Position = glm::vec3(0.0f, 0.75f, 1.3f);
                 camera.Front = glm::normalize(glm::vec3(0.0f, 0.0f, -1.0f));
+
                 glm::mat4 endM = glm::mat4(1.0f);
                 endM = glm::scale(endM, glm::vec3(0.5f));
                 ourShader.setMat4("model", endM);
-                if (gameOver)
+
+                if (gameOver) {
                     gameOverModel.Draw(ourShader);
-                else
+                }
+                else {
                     winModel.Draw(ourShader);
+                }
             }
 
-            if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && !rPressed) {
+            // Reiniciar juego
+            if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && !rPressed && gameOverTimer >= gameEndDelay) {
                 gameOver = false;
                 win = false;
                 gameStarted = true;
+                endSoundPlayed = false;
                 carPosition = glm::vec3(0.0f);
                 currentLane = 1;
                 asteroids.clear();
                 asteroidSpawnTimer = 0.0f;
                 gameOverTimer = 0.0f;
                 rPressed = true;
+
+                // Restaurar música de juego
+                playMusic(1, true);
             }
-            if (glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE) rPressed = false;
+            if (glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE) {
+                rPressed = false;
+            }
 
             glfwSwapBuffers(window);
             glfwPollEvents();
             continue;
         }
+
 
         float radians = glm::radians(carYaw);
         carDirection = glm::vec3(sin(radians), 0.0f, -cos(radians));
@@ -285,12 +571,14 @@ void processInput(GLFWwindow* window) {
 
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS && !aPressed) {
         if (currentLane > 0) currentLane--;
+        playDodgeSound(); // Reproducir sonido al esquivar a la izquierda
         aPressed = true;
     }
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_RELEASE) aPressed = false;
 
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS && !dPressed) {
         if (currentLane < 2) currentLane++;
+        playDodgeSound(); // Reproducir sonido al esquivar a la izquierda
         dPressed = true;
     }
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_RELEASE) dPressed = false;
@@ -299,6 +587,7 @@ void processInput(GLFWwindow* window) {
 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         carPosition.z -= carSpeed * deltaTime;
+
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
