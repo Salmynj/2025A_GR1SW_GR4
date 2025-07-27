@@ -46,6 +46,7 @@ float carSpeed = 5.0f;
 bool gameOver = false;
 bool rPressed = false;
 bool gameStarted = false;
+float gameOverTimer = 0.0f;
 
 struct Asteroid {
     glm::vec3 position;
@@ -105,6 +106,7 @@ int main() {
     Model ourModel("models/FantastiCar+Herbie/FantastiCar+Herbie.obj");
     Model asteroidModel("models/asteroid/asteroid01.obj");
     Model startModel("models/StartScreen/startScreen.obj");
+    Model gameOverModel("models/GameOver/GameOver.obj");
 
     while (!glfwWindowShouldClose(window)) {
         float currentFrame = glfwGetTime();
@@ -142,9 +144,38 @@ int main() {
             continue;
         }
 
+        if (gameOver) {
+            gameOverTimer += deltaTime;
+
+            if (gameOverTimer >= 0.1f) {
+                camera.Position = glm::vec3(0.0f, 0.75f, 1.3f);
+                camera.Front = glm::normalize(glm::vec3(0.0f, 0.0f, -1.0f));
+                glm::mat4 gameOverM = glm::mat4(1.0f);
+                gameOverM = glm::translate(gameOverM, glm::vec3(0.0f, 0.0f, 0.0f));
+                gameOverM = glm::scale(gameOverM, glm::vec3(0.5f));
+                ourShader.setMat4("model", gameOverM);
+                gameOverModel.Draw(ourShader);
+            }
+
+            if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && !rPressed) {
+                gameOver = false;
+                gameStarted = true;
+                carPosition = glm::vec3(0.0f);
+                currentLane = 1;
+                asteroids.clear();
+                asteroidSpawnTimer = 0.0f;
+                gameOverTimer = 0.0f;
+                rPressed = true;
+            }
+            if (glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE) rPressed = false;
+
+            glfwSwapBuffers(window);
+            glfwPollEvents();
+            continue;
+        }
+
         float radians = glm::radians(carYaw);
         carDirection = glm::vec3(sin(radians), 0.0f, -cos(radians));
-
         glm::vec3 desiredCameraPos = carPosition + glm::normalize(-carDirection) * 1.5f + glm::vec3(0.0f, 0.4f, 0.0f);
         cameraTargetPos = glm::mix(cameraTargetPos, desiredCameraPos, 3.0f * deltaTime);
         camera.Position = cameraTargetPos;
@@ -165,24 +196,12 @@ int main() {
             asteroidSpawnTimer = 0.0f;
         }
 
-        if (!gameOver) {
-            for (const Asteroid& ast : asteroids) {
-                if (checkCollision(carPosition, ast.position)) {
-                    gameOver = true;
-                    break;
-                }
+        for (const Asteroid& ast : asteroids) {
+            if (checkCollision(carPosition, ast.position)) {
+                gameOver = true;
+                gameOverTimer = 0.0f;
+                break;
             }
-        }
-        else {
-            if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && !rPressed) {
-                gameOver = false;
-                carPosition = glm::vec3(0.0f);
-                currentLane = 1;
-                asteroids.clear();
-                asteroidSpawnTimer = 0.0f;
-                rPressed = true;
-            }
-            if (glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE) rPressed = false;
         }
 
         for (Asteroid& ast : asteroids) {
@@ -194,9 +213,9 @@ int main() {
             asteroidModel.Draw(ourShader);
         }
 
-        asteroids.erase(std::remove_if(asteroids.begin(), asteroids.end(), [](const Asteroid& a) {
-            return a.position.z > 10.0f;
-            }), asteroids.end());
+        asteroids.erase(std::remove_if(asteroids.begin(), asteroids.end(),
+            [](const Asteroid& a) { return a.position.z > 10.0f; }),
+            asteroids.end());
 
         glfwSwapBuffers(window);
         glfwPollEvents();
