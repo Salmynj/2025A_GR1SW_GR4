@@ -14,6 +14,9 @@
 #include <cstdlib>
 #include <ctime>
 #include <algorithm>
+#include <string>
+#include <sstream>
+#include <iomanip>
 
 #include <AL/al.h>
 #include <AL/alc.h>
@@ -62,6 +65,12 @@ float gameOverTimer = 0.0f;
 float headRotationAngle = 0.0f;
 float headRotationSpeed = 5.0f;
 float headRotationLimit = 20.0f;
+
+// Variables para animación de StartScreen en pantalla de inicio
+std::vector<Model*> startScreenFrames;
+int currentStartScreenFrame = 0;
+float startScreenAnimationTimer = 0.0f;
+float startScreenFrameRate = 24.0f; // 24 fps
 
 // Variables para audio
 ALCdevice* audioDevice = nullptr;
@@ -159,7 +168,7 @@ void playDodgeSound() {
     ALuint source;
     alGenSources(1, &source);
     alSourcei(source, AL_BUFFER, dodgeSoundBuffer);
-    alSourcef(source, AL_GAIN, 0.6f); 
+    alSourcef(source, AL_GAIN, 0.6f);
     alSourcePlay(source);
     dodgeSoundSources.push_back(source);
     lastDodgeTime = currentTime;
@@ -247,12 +256,25 @@ int main() {
 
     Model ourModel("models/FantastiCar+Herbie/FantastiCar+Herbie.obj");
     Model asteroidModel("models/asteroid/asteroid01.obj");
-    Model startModel("models/StartScreen/startScreen.obj");
     Model gameOverModel("models/GameOver/GameOver.obj");
     Model galactusModel("models/Galactus/GalactusCuerpo.obj");
     Model galactusHeadModel("models/Galactus/GalactusCabeza.obj");
     Model winModel("models/Win/Win.obj");
     Model nebulaModel("models/nebula/nebula.obj");
+
+    // Cargar frames de animación de StartScreen para pantalla de inicio
+    startScreenFrames.resize(20);
+    for (int i = 0; i < 20; i++) {
+        std::stringstream ss;
+        ss << "models/StartScreen/StartScreen" << std::setfill('0') << std::setw(4) << (i + 1) << ".obj";
+        try {
+            startScreenFrames[i] = new Model(ss.str());
+        }
+        catch (...) {
+            std::cout << "Error cargando frame de StartScreen: " << ss.str() << std::endl;
+            startScreenFrames[i] = nullptr;
+        }
+    }
 
     //Música
     // Inicialización OpenAL
@@ -294,7 +316,7 @@ int main() {
     alGenSources(1, &musicSource);
     alSourcef(musicSource, AL_GAIN, 0.7f);
 
-	// Sonido de esquivación
+    // Sonido de esquivación
     std::vector<char> dodgeData;
     ALenum dodgeFormat;
     ALsizei dodgeFreq;
@@ -356,18 +378,18 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         ourShader.use();
-        
+
         glm::mat4 nebulaM = glm::mat4(1.0f);
         nebulaM = glm::translate(nebulaM, glm::vec3(0.0f, 0.0f, 0.0f));
         nebulaM = glm::scale(nebulaM, glm::vec3(150.0f, 150.0f, 150.0f));
-        ourShader.setMat4("model",nebulaM); 
+        ourShader.setMat4("model", nebulaM);
         nebulaModel.Draw(ourShader);
 
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 200.0f);
         glm::mat4 view = camera.GetViewMatrix();
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", view);
-        
+
         // Control de música basado en el estado del juego
         if (!gameStarted) {
             if (currentMusic != 0) playMusic(0, true); // Música de inicio en loop
@@ -400,14 +422,27 @@ int main() {
             }
         }
 
-		
+
         if (!gameStarted) {
             camera.Position = glm::vec3(0.0f, 0.75f, 1.3f);
             camera.Front = glm::normalize(glm::vec3(0.0f, 0.0f, -1.0f));
-            glm::mat4 startM = glm::mat4(1.0f);
-            startM = glm::scale(startM, glm::vec3(0.5f));
-            ourShader.setMat4("model", startM);
-            startModel.Draw(ourShader);
+
+            // Animación de StartScreen en pantalla de inicio
+            startScreenAnimationTimer += deltaTime;
+            float frameTime = 1.0f / startScreenFrameRate;
+            if (startScreenAnimationTimer >= frameTime) {
+                currentStartScreenFrame = (currentStartScreenFrame + 1) % 20;
+                startScreenAnimationTimer = 0.0f;
+            }
+
+            // Dibujar frame actual de StartScreen
+            if (startScreenFrames[currentStartScreenFrame] != nullptr) {
+                glm::mat4 startScreenM = glm::mat4(1.0f);
+                startScreenM = glm::translate(startScreenM, glm::vec3(0.0f, 0.0f, 0.0f));
+                startScreenM = glm::scale(startScreenM, glm::vec3(0.5f));
+                ourShader.setMat4("model", startScreenM);
+                startScreenFrames[currentStartScreenFrame]->Draw(ourShader);
+            }
 
             if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && !rPressed) {
                 gameStarted = true;
@@ -420,7 +455,7 @@ int main() {
             continue;
         }
 
-       
+
         // En el bucle principal, reemplaza los dos bloques de gameOver/win por este único bloque:
 
         if (gameOver || win) {
@@ -467,6 +502,9 @@ int main() {
                 asteroidSpawnTimer = 0.0f;
                 gameOverTimer = 0.0f;
                 rPressed = true;
+                // Reiniciar animación de StartScreen
+                currentStartScreenFrame = 0;
+                startScreenAnimationTimer = 0.0f;
 
                 // Restaurar música de juego
                 playMusic(1, true);
@@ -555,6 +593,14 @@ int main() {
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
+
+    // Limpiar memoria de los frames de StartScreen
+    for (Model* model : startScreenFrames) {
+        if (model != nullptr) {
+            delete model;
+        }
+    }
+    startScreenFrames.clear();
 
     glfwTerminate();
     return 0;
