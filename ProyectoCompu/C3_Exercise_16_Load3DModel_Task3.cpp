@@ -1,4 +1,4 @@
-﻿
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -48,6 +48,7 @@ bool gameOver = false;
 bool rPressed = false;
 bool gameStarted = false;
 float gameOverTimer = 0.0f;
+
 
 float headRotationAngle = 0.0f;
 float headRotationSpeed = 5.0f;
@@ -112,8 +113,10 @@ int main() {
     Model asteroidModel("models/asteroid/asteroid01.obj");
     Model startModel("models/StartScreen/startScreen.obj");
     Model gameOverModel("models/GameOver/GameOver.obj");
+
     Model galactusModel("models/Galactus/GalactusCuerpo.obj");
     Model galactusHeadModel("models/Galactus/GalactusCabeza.obj");
+
 
     while (!glfwWindowShouldClose(window)) {
         float currentFrame = glfwGetTime();
@@ -135,6 +138,12 @@ int main() {
             camera.Position = glm::vec3(0.0f, 0.75f, 1.3f);
             camera.Front = glm::normalize(glm::vec3(0.0f, 0.0f, -1.0f));
             glm::mat4 startM = glm::mat4(1.0f);
+
+            startM = glm::scale(startM, glm::vec3(0.5f));
+            ourShader.setMat4("model", startM);
+            startModel.Draw(ourShader);
+
+            startM = glm::translate(startM, glm::vec3(0.0f, 0.0f, 0.0f));
             startM = glm::scale(startM, glm::vec3(0.5f));
             ourShader.setMat4("model", startM);
             startModel.Draw(ourShader);
@@ -149,6 +158,65 @@ int main() {
             glfwPollEvents();
             continue;
         }
+
+        if (gameOver) {
+            gameOverTimer += deltaTime;
+
+            if (gameOverTimer >= 0.1f) {
+                camera.Position = glm::vec3(0.0f, 0.75f, 1.3f);
+                camera.Front = glm::normalize(glm::vec3(0.0f, 0.0f, -1.0f));
+                glm::mat4 gameOverM = glm::mat4(1.0f);
+                gameOverM = glm::translate(gameOverM, glm::vec3(0.0f, 0.0f, 0.0f));
+                gameOverM = glm::scale(gameOverM, glm::vec3(0.5f));
+                ourShader.setMat4("model", gameOverM);
+                gameOverModel.Draw(ourShader);
+            }
+
+            if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && !rPressed) {
+                gameOver = false;
+                gameStarted = true;
+                carPosition = glm::vec3(0.0f);
+                currentLane = 1;
+                asteroids.clear();
+                asteroidSpawnTimer = 0.0f;
+                gameOverTimer = 0.0f;
+                rPressed = true;
+            }
+            if (glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE) rPressed = false;
+
+            glfwSwapBuffers(window);
+            glfwPollEvents();
+            continue;
+        }
+
+        float radians = glm::radians(carYaw);
+        carDirection = glm::vec3(sin(radians), 0.0f, -cos(radians));
+        glm::vec3 desiredCameraPos = carPosition + glm::normalize(-carDirection) * 1.5f + glm::vec3(0.0f, 0.4f, 0.0f);
+        cameraTargetPos = glm::mix(cameraTargetPos, desiredCameraPos, 3.0f * deltaTime);
+        camera.Position = cameraTargetPos;
+        camera.Front = glm::normalize((carPosition + glm::vec3(0.0f, 0.3f, -1.2f)) - camera.Position);
+
+        if (!gameOver) {
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::translate(model, carPosition);
+            model = glm::rotate(model, glm::radians(carYaw + 180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+            model = glm::scale(model, glm::vec3(0.1f));
+            ourShader.setMat4("model", model);
+            ourModel.Draw(ourShader);
+        }
+
+
+            if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && !rPressed) {
+                gameStarted = true;
+                rPressed = true;
+            }
+            if (glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE) rPressed = false;
+
+            glfwSwapBuffers(window);
+            glfwPollEvents();
+            continue;
+        }
+
 
         if (gameOver) {
             gameOverTimer += deltaTime;
@@ -225,6 +293,14 @@ int main() {
                 gameOverTimer = 0.0f;
                 break;
             }
+
+        for (const Asteroid& ast : asteroids) {
+            if (checkCollision(carPosition, ast.position)) {
+                gameOver = true;
+                gameOverTimer = 0.0f;
+                break;
+            }
+
         }
 
         for (Asteroid& ast : asteroids) {
