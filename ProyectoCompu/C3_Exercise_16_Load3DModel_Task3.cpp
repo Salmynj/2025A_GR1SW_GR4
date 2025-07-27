@@ -1,4 +1,4 @@
-﻿// Código final: al llegar al trigger invisible frente a Galactus se gana, se muestra Win.obj y se congela el carro
+// Código final: al llegar al trigger invisible frente a Galactus se gana, se muestra Win.obj y se congela el carro
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
