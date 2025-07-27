@@ -72,6 +72,18 @@ int currentStartScreenFrame = 0;
 float startScreenAnimationTimer = 0.0f;
 float startScreenFrameRate = 24.0f; // 24 fps
 
+// Variables para animación de GameOver
+std::vector<Model*> gameOverFrames;
+int currentGameOverFrame = 0;
+float gameOverAnimationTimer = 0.0f;
+float gameOverFrameRate = 24.0f; // 24 fps
+
+// Variables para animación de Win
+std::vector<Model*> winFrames;
+int currentWinFrame = 0;
+float winAnimationTimer = 0.0f;
+float winFrameRate = 24.0f; // 24 fps
+
 // Variables para audio
 ALCdevice* audioDevice = nullptr;
 ALCcontext* audioContext = nullptr;
@@ -256,10 +268,8 @@ int main() {
 
     Model ourModel("models/FantastiCar+Herbie/FantastiCar+Herbie.obj");
     Model asteroidModel("models/asteroid/asteroid01.obj");
-    Model gameOverModel("models/GameOver/GameOver.obj");
     Model galactusModel("models/Galactus/GalactusCuerpo.obj");
     Model galactusHeadModel("models/Galactus/GalactusCabeza.obj");
-    Model winModel("models/Win/Win.obj");
     Model nebulaModel("models/nebula/nebula.obj");
 
     // Cargar frames de animación de StartScreen para pantalla de inicio
@@ -273,6 +283,34 @@ int main() {
         catch (...) {
             std::cout << "Error cargando frame de StartScreen: " << ss.str() << std::endl;
             startScreenFrames[i] = nullptr;
+        }
+    }
+
+    // Cargar frames de animación de GameOver
+    gameOverFrames.resize(20);
+    for (int i = 0; i < 20; i++) {
+        std::stringstream ss;
+        ss << "models/GameOver/GameOver" << std::setfill('0') << std::setw(4) << (i + 1) << ".obj";
+        try {
+            gameOverFrames[i] = new Model(ss.str());
+        }
+        catch (...) {
+            std::cout << "Error cargando frame de GameOver: " << ss.str() << std::endl;
+            gameOverFrames[i] = nullptr;
+        }
+    }
+
+    // Cargar frames de animación de Win
+    winFrames.resize(20);
+    for (int i = 0; i < 20; i++) {
+        std::stringstream ss;
+        ss << "models/Win/Win" << std::setfill('0') << std::setw(4) << (i + 1) << ".obj";
+        try {
+            winFrames[i] = new Model(ss.str());
+        }
+        catch (...) {
+            std::cout << "Error cargando frame de Win: " << ss.str() << std::endl;
+            winFrames[i] = nullptr;
         }
     }
 
@@ -478,15 +516,41 @@ int main() {
                 camera.Position = glm::vec3(0.0f, 0.75f, 1.3f);
                 camera.Front = glm::normalize(glm::vec3(0.0f, 0.0f, -1.0f));
 
-                glm::mat4 endM = glm::mat4(1.0f);
-                endM = glm::scale(endM, glm::vec3(0.5f));
-                ourShader.setMat4("model", endM);
-
                 if (gameOver) {
-                    gameOverModel.Draw(ourShader);
+                    // Animación de GameOver
+                    gameOverAnimationTimer += deltaTime;
+                    float frameTime = 1.0f / gameOverFrameRate;
+                    if (gameOverAnimationTimer >= frameTime) {
+                        currentGameOverFrame = (currentGameOverFrame + 1) % 20;
+                        gameOverAnimationTimer = 0.0f;
+                    }
+
+                    // Dibujar frame actual de GameOver
+                    if (gameOverFrames[currentGameOverFrame] != nullptr) {
+                        glm::mat4 gameOverM = glm::mat4(1.0f);
+                        gameOverM = glm::translate(gameOverM, glm::vec3(0.0f, 0.0f, 0.0f));
+                        gameOverM = glm::scale(gameOverM, glm::vec3(0.5f));
+                        ourShader.setMat4("model", gameOverM);
+                        gameOverFrames[currentGameOverFrame]->Draw(ourShader);
+                    }
                 }
                 else {
-                    winModel.Draw(ourShader);
+                    // Animación de Win
+                    winAnimationTimer += deltaTime;
+                    float frameTime = 1.0f / winFrameRate;
+                    if (winAnimationTimer >= frameTime) {
+                        currentWinFrame = (currentWinFrame + 1) % 20;
+                        winAnimationTimer = 0.0f;
+                    }
+
+                    // Dibujar frame actual de Win
+                    if (winFrames[currentWinFrame] != nullptr) {
+                        glm::mat4 winM = glm::mat4(1.0f);
+                        winM = glm::translate(winM, glm::vec3(0.0f, 0.0f, 0.0f));
+                        winM = glm::scale(winM, glm::vec3(0.5f));
+                        ourShader.setMat4("model", winM);
+                        winFrames[currentWinFrame]->Draw(ourShader);
+                    }
                 }
             }
 
@@ -505,6 +569,12 @@ int main() {
                 // Reiniciar animación de StartScreen
                 currentStartScreenFrame = 0;
                 startScreenAnimationTimer = 0.0f;
+                // Reiniciar animación de GameOver
+                currentGameOverFrame = 0;
+                gameOverAnimationTimer = 0.0f;
+                // Reiniciar animación de Win
+                currentWinFrame = 0;
+                winAnimationTimer = 0.0f;
 
                 // Restaurar música de juego
                 playMusic(1, true);
@@ -601,6 +671,22 @@ int main() {
         }
     }
     startScreenFrames.clear();
+
+    // Limpiar memoria de los frames de GameOver
+    for (Model* model : gameOverFrames) {
+        if (model != nullptr) {
+            delete model;
+        }
+    }
+    gameOverFrames.clear();
+
+    // Limpiar memoria de los frames de Win
+    for (Model* model : winFrames) {
+        if (model != nullptr) {
+            delete model;
+        }
+    }
+    winFrames.clear();
 
     glfwTerminate();
     return 0;
