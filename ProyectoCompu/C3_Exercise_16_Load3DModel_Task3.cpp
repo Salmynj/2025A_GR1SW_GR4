@@ -267,13 +267,84 @@ int main() {
     }
 
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_PROGRAM_POINT_SIZE); // solo para probar si se están dibujando los puntos
+    glDisable(GL_CULL_FACE);
+
+    Shader lightCubeShader("shaders/shader_exercise15_lightcube.vs", "shaders/shader_exercise15_lightcube.fs");
     Shader ourShader("shaders/shader_exercise16_mloading.vs", "shaders/shader_exercise16_mloading.fs");
 
+    Model nebulaModel("models/nebula/nebula.obj");
     Model ourModel("models/FantastiCar+Herbie/FantastiCar+Herbie.obj");
     Model asteroidModel("models/asteroid/asteroid01.obj");
     Model galactusModel("models/Galactus/GalactusCuerpo.obj");
     Model galactusHeadModel("models/Galactus/GalactusCabeza.obj");
-    Model nebulaModel("models/nebula/nebula.obj");
+    
+    #define NR_POINT_LIGHTS 10000
+    glm::vec3 pointLightPositions[NR_POINT_LIGHTS];
+
+    for (int i = 0; i < NR_POINT_LIGHTS; i++) {
+        float x = ((i % 10) - 5) * 20.0f; // 10 luces por fila
+        float y = ((i / 10) - 2) * 10.0f; // 5 filas
+        float z = sin(i * 1.0f) * 15.0f;
+        pointLightPositions[i] = glm::vec3(x, y + 10.0f, z - 150.0f);
+    }
+
+    float cubeVertices[] = {
+        // posiciones         
+        -0.1f, -0.1f, -0.1f,
+         0.1f, -0.1f, -0.1f,
+         0.1f,  0.1f, -0.1f,
+         0.1f,  0.1f, -0.1f,
+        -0.1f,  0.1f, -0.1f,
+        -0.1f, -0.1f, -0.1f,
+
+        -0.1f, -0.1f,  0.1f,
+         0.1f, -0.1f,  0.1f,
+         0.1f,  0.1f,  0.1f,
+         0.1f,  0.1f,  0.1f,
+        -0.1f,  0.1f,  0.1f,
+        -0.1f, -0.1f,  0.1f,
+
+        -0.1f,  0.1f,  0.1f,
+        -0.1f,  0.1f, -0.1f,
+        -0.1f, -0.1f, -0.1f,
+        -0.1f, -0.1f, -0.1f,
+        -0.1f, -0.1f,  0.1f,
+        -0.1f,  0.1f,  0.1f,
+
+         0.1f,  0.1f,  0.1f,
+         0.1f,  0.1f, -0.1f,
+         0.1f, -0.1f, -0.1f,
+         0.1f, -0.1f, -0.1f,
+         0.1f, -0.1f,  0.1f,
+         0.1f,  0.1f,  0.1f,
+
+        -0.1f, -0.1f, -0.1f,
+         0.1f, -0.1f, -0.1f,
+         0.1f, -0.1f,  0.1f,
+         0.1f, -0.1f,  0.1f,
+        -0.1f, -0.1f,  0.1f,
+        -0.1f, -0.1f, -0.1f,
+
+        -0.1f,  0.1f, -0.1f,
+         0.1f,  0.1f, -0.1f,
+         0.1f,  0.1f,  0.1f,
+         0.1f,  0.1f,  0.1f,
+        -0.1f,  0.1f,  0.1f,
+        -0.1f,  0.1f, -0.1f
+    };
+
+    unsigned int cubeVAO, cubeVBO;
+    glGenVertexArrays(1, &cubeVAO);
+    glGenBuffers(1, &cubeVBO);
+    glBindVertexArray(cubeVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glBindVertexArray(0);
+
+
 
     // CARGA DE PANTALLAS ANIMADAS COMENTADA - Descomenta para usar las animaciones completas
     /*
@@ -411,6 +482,11 @@ int main() {
             (ALsizei)loseSoundData.size(), loseFreq);
     }
 
+
+    //Render loop ---------------------------------------------------------------------
+
+
+
     while (!glfwWindowShouldClose(window)) {
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
@@ -422,17 +498,18 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         ourShader.use();
+        ourShader.setFloat("time", glfwGetTime());
+
+        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 200.0f);
+        glm::mat4 view = camera.GetViewMatrix();
+        ourShader.setMat4("projection", projection);
+        ourShader.setMat4("view", view);
 
         glm::mat4 nebulaM = glm::mat4(1.0f);
         nebulaM = glm::translate(nebulaM, glm::vec3(0.0f, 0.0f, 0.0f));
         nebulaM = glm::scale(nebulaM, glm::vec3(150.0f, 150.0f, 150.0f));
         ourShader.setMat4("model", nebulaM);
         nebulaModel.Draw(ourShader);
-
-        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 200.0f);
-        glm::mat4 view = camera.GetViewMatrix();
-        ourShader.setMat4("projection", projection);
-        ourShader.setMat4("view", view);
 
         // Control de música basado en el estado del juego
         if (!gameStarted) {
@@ -623,6 +700,8 @@ int main() {
         camera.Position = cameraTargetPos;
         camera.Front = glm::normalize((carPosition + glm::vec3(0.0f, 0.3f, -1.2f)) - camera.Position);
 
+      
+
         if (!win) {
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::translate(model, carPosition);
@@ -632,7 +711,7 @@ int main() {
             ourModel.Draw(ourShader);
         }
 
-        glm::vec3 galactusPos = glm::vec3(0.0f, -96.0f, -90.0f);
+        glm::vec3 galactusPos = glm::vec3(0.0f, -96.0f, -90.0f); //coordenadas del galactus 
 
         glm::mat4 gBody = glm::mat4(1.0f);
         gBody = glm::translate(gBody, galactusPos);
@@ -686,6 +765,24 @@ int main() {
         asteroids.erase(std::remove_if(asteroids.begin(), asteroids.end(),
             [](const Asteroid& a) { return a.position.z > 10.0f; }),
             asteroids.end());
+
+
+        // Setup lights
+
+        lightCubeShader.use();
+        lightCubeShader.setMat4("view", view);
+        lightCubeShader.setMat4("projection", projection);
+
+        glBindVertexArray(cubeVAO);
+        for (int i = 0; i < NR_POINT_LIGHTS; i++) {
+            glm::mat4 modelLight = glm::mat4(1.0f);
+            modelLight = glm::translate(modelLight, pointLightPositions[i]);
+            modelLight = glm::scale(modelLight, glm::vec3(2.5f)); // cubo más pequeño
+            lightCubeShader.setMat4("model", modelLight);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
+        glBindVertexArray(0);
+        
 
         glfwSwapBuffers(window);
         glfwPollEvents();
