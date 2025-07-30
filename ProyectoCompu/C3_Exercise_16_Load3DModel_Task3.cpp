@@ -68,7 +68,7 @@ float headRotationSpeed = 5.0f;
 float headRotationLimit = 20.0f;
 
 // PANTALLAS ANIMADAS COMENTADAS - Descomenta para usar las animaciones completas
-/*
+
 // Variables para animación de StartScreen en pantalla de inicio
 std::vector<Model*> startScreenFrames;
 int currentStartScreenFrame = 0;
@@ -86,7 +86,7 @@ std::vector<Model*> winFrames;
 int currentWinFrame = 0;
 float winAnimationTimer = 0.0f;
 float winFrameRate = 24.0f; // 24 fps
-*/
+
 
 // Variables para audio
 ALCdevice* audioDevice = nullptr;
@@ -354,8 +354,6 @@ int main() {
 
 
 
-    // CARGA DE PANTALLAS ANIMADAS COMENTADA - Descomenta para usar las animaciones completas
-    /*
     // Cargar frames de animación de StartScreen para pantalla de inicio
     startScreenFrames.resize(20);
     for (int i = 0; i < 20; i++) {
@@ -397,7 +395,7 @@ int main() {
             winFrames[i] = nullptr;
         }
     }
-    */
+    
 
     //Música
     // Inicialización OpenAL
@@ -560,12 +558,9 @@ int main() {
             camera.Position = glm::vec3(0.0f, 0.75f, 1.3f);
             camera.Front = glm::normalize(glm::vec3(0.0f, 0.0f, -1.0f));
 
-            // PANTALLA DE INICIO SIMPLIFICADA
-            // Texto simple en lugar de animación
-            std::cout << "Presiona R para iniciar el juego" << std::endl;
 
-            // ANIMACIÓN COMENTADA - Descomenta para usar la animación completa
-            /*
+
+
             // Animación de StartScreen en pantalla de inicio
             startScreenAnimationTimer += deltaTime;
             float frameTime = 1.0f / startScreenFrameRate;
@@ -582,7 +577,7 @@ int main() {
                 ourShader.setMat4("model", startScreenM);
                 startScreenFrames[currentStartScreenFrame]->Draw(ourShader);
             }
-            */
+            
 
             if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && !rPressed) {
                 gameStarted = true;
@@ -612,21 +607,13 @@ int main() {
                 }
             }
 
-            // Mostrar pantalla después del retraso (simplificada)
+            // Mostrar pantalla después del retraso 
             if (gameOverTimer >= gameEndDelay) {
                 camera.Position = glm::vec3(0.0f, 0.75f, 1.3f);
                 camera.Front = glm::normalize(glm::vec3(0.0f, 0.0f, -1.0f));
 
-                // Mensajes simples en lugar de animaciones
-                if (gameOver) {
-                    std::cout << "GAME OVER - Presiona R para reiniciar" << std::endl;
-                }
-                else {
-                    std::cout << "¡VICTORIA! - Presiona R para jugar de nuevo" << std::endl;
-                }
 
-                // ANIMACIONES COMENTADAS - Descomenta para usar las animaciones completas
-                /*
+
                 if (gameOver) {
                     // Animación de GameOver
                     gameOverAnimationTimer += deltaTime;
@@ -663,7 +650,7 @@ int main() {
                         winFrames[currentWinFrame]->Draw(ourShader);
                     }
                 }
-                */
+                
             }
 
             // Reiniciar juego
@@ -679,8 +666,7 @@ int main() {
                 gameOverTimer = 0.0f;
                 rPressed = true;
 
-                // REINICIO DE ANIMACIONES COMENTADO - Descomenta si usas las animaciones
-                /*
+
                 // Reiniciar animación de StartScreen
                 currentStartScreenFrame = 0;
                 startScreenAnimationTimer = 0.0f;
@@ -690,7 +676,7 @@ int main() {
                 // Reiniciar animación de Win
                 currentWinFrame = 0;
                 winAnimationTimer = 0.0f;
-                */
+                
 
                 // Restaurar música de juego
                 playMusic(1, true);
@@ -879,8 +865,7 @@ int main() {
         glfwPollEvents();
     }
 
-    // LIMPIEZA DE MEMORIA COMENTADA - Descomenta si usas las animaciones
-    /*
+
     // Limpiar memoria de los frames de StartScreen
     for (Model* model : startScreenFrames) {
         if (model != nullptr) {
@@ -904,7 +889,7 @@ int main() {
         }
     }
     winFrames.clear();
-    */
+    
 
     glfwTerminate();
     return 0;
