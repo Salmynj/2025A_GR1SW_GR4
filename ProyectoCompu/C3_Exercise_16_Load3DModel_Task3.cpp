@@ -35,6 +35,7 @@ void playMusic(int musicIndex, bool loop);
 void stopMusic();
 void updateAudio();
 
+unsigned int loadTexture(const char* path); //función para cargar las texturas 
 
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
@@ -66,6 +67,7 @@ float headRotationAngle = 0.0f;
 float headRotationSpeed = 5.0f;
 float headRotationLimit = 20.0f;
 
+
 // Variables para animación de StartScreen en pantalla de inicio
 std::vector<Model*> startScreenFrames;
 int currentStartScreenFrame = 0;
@@ -83,6 +85,7 @@ std::vector<Model*> winFrames;
 int currentWinFrame = 0;
 float winAnimationTimer = 0.0f;
 float winFrameRate = 24.0f; // 24 fps
+
 
 // Variables para audio
 ALCdevice* audioDevice = nullptr;
@@ -297,7 +300,7 @@ int main() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-#ifdef __APPLE__
+#ifdef _APPLE_
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
@@ -319,13 +322,92 @@ int main() {
     }
 
     glEnable(GL_DEPTH_TEST);
-    Shader ourShader("shaders/shader_exercise16_mloading.vs", "shaders/shader_exercise16_mloading.fs");
+    glEnable(GL_PROGRAM_POINT_SIZE); // solo para probar si se están dibujando los puntos
+    glDisable(GL_CULL_FACE);
 
+    Shader lightCubeShader("shaders/shader_exercise15_lightcube.vs", "shaders/shader_exercise15_lightcube.fs");
+    Shader ourShader("shaders/shader_exercise16_mloading.vs", "shaders/shader_exercise16_mloading.fs");
+    Shader ojitosShader("shaders/shader_exercise9t5.vs", "shaders/shader_exercise9t5.fs");
+    Shader flashlightShader("shaders/shader_flashlight.vs", "shaders/shader_flashlight.fs");
+	Shader flamaShader("shaders/shader_flama.vs", "shaders/shader_flama.fs");
+
+    // Carga de modelos
+
+    Model nebulaModel("models/nebula/nebula.obj");
     Model ourModel("models/FantastiCar+Herbie/FantastiCar+Herbie.obj");
     Model asteroidModel("models/asteroid/asteroid01.obj");
     Model galactusModel("models/Galactus/GalactusCuerpo.obj");
     Model galactusHeadModel("models/Galactus/GalactusCabeza.obj");
-    Model nebulaModel("models/nebula/nebula.obj");
+    Model galactusOjitosModel("models/ojitos/ojitos2.obj");
+    Model flamesModel("models/flama/flamaAzul.obj"); 
+
+    #define NR_POINT_LIGHTS 10000
+    glm::vec3 pointLightPositions[NR_POINT_LIGHTS];
+
+    for (int i = 0; i < NR_POINT_LIGHTS; i++) {
+        float x = ((i % 10) - 5) * 20.0f; // 10 luces por fila
+        float y = ((i / 10) - 2) * 10.0f; // 5 filas
+        float z = sin(i * 1.0f) * 15.0f;
+        pointLightPositions[i] = glm::vec3(x, y + 10.0f, z - 150.0f);
+    }
+
+    float cubeVertices[] = {
+        // posiciones         
+        -0.1f, -0.1f, -0.1f,
+         0.1f, -0.1f, -0.1f,
+         0.1f,  0.1f, -0.1f,
+         0.1f,  0.1f, -0.1f,
+        -0.1f,  0.1f, -0.1f,
+        -0.1f, -0.1f, -0.1f,
+
+        -0.1f, -0.1f,  0.1f,
+         0.1f, -0.1f,  0.1f,
+         0.1f,  0.1f,  0.1f,
+         0.1f,  0.1f,  0.1f,
+        -0.1f,  0.1f,  0.1f,
+        -0.1f, -0.1f,  0.1f,
+
+        -0.1f,  0.1f,  0.1f,
+        -0.1f,  0.1f, -0.1f,
+        -0.1f, -0.1f, -0.1f,
+        -0.1f, -0.1f, -0.1f,
+        -0.1f, -0.1f,  0.1f,
+        -0.1f,  0.1f,  0.1f,
+
+         0.1f,  0.1f,  0.1f,
+         0.1f,  0.1f, -0.1f,
+         0.1f, -0.1f, -0.1f,
+         0.1f, -0.1f, -0.1f,
+         0.1f, -0.1f,  0.1f,
+         0.1f,  0.1f,  0.1f,
+
+        -0.1f, -0.1f, -0.1f,
+         0.1f, -0.1f, -0.1f,
+         0.1f, -0.1f,  0.1f,
+         0.1f, -0.1f,  0.1f,
+        -0.1f, -0.1f,  0.1f,
+        -0.1f, -0.1f, -0.1f,
+
+        -0.1f,  0.1f, -0.1f,
+         0.1f,  0.1f, -0.1f,
+         0.1f,  0.1f,  0.1f,
+         0.1f,  0.1f,  0.1f,
+        -0.1f,  0.1f,  0.1f,
+        -0.1f,  0.1f, -0.1f
+    };
+
+    unsigned int cubeVAO, cubeVBO;
+    glGenVertexArrays(1, &cubeVAO);
+    glGenBuffers(1, &cubeVBO);
+    glBindVertexArray(cubeVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glBindVertexArray(0);
+
+
+
 
     // Cargar modelos de pantallas iniciales
     try {
@@ -343,6 +425,7 @@ int main() {
     catch (...) {
         std::cout << "Error cargando modelo logo.obj" << std::endl;
     }
+
 
     // Cargar frames de animación de StartScreen para pantalla de inicio
     startScreenFrames.resize(20);
@@ -510,8 +593,18 @@ int main() {
             (ALsizei)loseSoundData.size(), loseFreq);
     }
 
+
     // Inicializar el tiempo base
     float startTime = glfwGetTime();
+=======
+
+    //Render loop ---------------------------------------------------------------------
+    unsigned int azulTextureID = loadTexture("flama/Azul.png");
+    unsigned int turquesaTextureID = loadTexture("flama/Turquesa.png");
+    unsigned int celesteTextureID = loadTexture("flama/Celeste.png");
+
+
+
 
     while (!glfwWindowShouldClose(window)) {
         float currentFrame = glfwGetTime();
@@ -524,6 +617,13 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         ourShader.use();
+        //ourShader.setFloat("time", glfwGetTime());
+        ojitosShader.setFloat("time", glfwGetTime());
+
+        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 200.0f);
+        glm::mat4 view = camera.GetViewMatrix();
+        ourShader.setMat4("projection", projection);
+        ourShader.setMat4("view", view);
 
         // 1. Pantalla Studio
         if (showStudio) {
@@ -645,11 +745,6 @@ int main() {
         ourShader.setMat4("model", nebulaM);
         nebulaModel.Draw(ourShader);
 
-        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 200.0f);
-        glm::mat4 view = camera.GetViewMatrix();
-        ourShader.setMat4("projection", projection);
-        ourShader.setMat4("view", view);
-
         // Control de música basado en el estado del juego
         if (!gameStarted) {
             if (currentMusic != 0) playMusic(0, true); // Música de inicio en loop
@@ -687,6 +782,7 @@ int main() {
             camera.Position = glm::vec3(0.0f, 0.75f, 1.3f);
             camera.Front = glm::normalize(glm::vec3(0.0f, 0.0f, -1.0f));
 
+
             // Animación de StartScreen en pantalla de inicio
             startScreenAnimationTimer += deltaTime;
             float frameTime = 1.0f / startScreenFrameRate;
@@ -703,6 +799,7 @@ int main() {
                 ourShader.setMat4("model", startScreenM);
                 startScreenFrames[currentStartScreenFrame]->Draw(ourShader);
             }
+
 
             if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && !rPressed) {
                 gameStarted = true;
@@ -733,10 +830,10 @@ int main() {
                 }
             }
 
-            // Mostrar pantalla después del retraso
             if (gameOverTimer >= gameEndDelay) {
                 camera.Position = glm::vec3(0.0f, 0.75f, 1.3f);
                 camera.Front = glm::normalize(glm::vec3(0.0f, 0.0f, -1.0f));
+
 
                 if (gameOver) {
                     // Animación de GameOver
@@ -774,6 +871,7 @@ int main() {
                         winFrames[currentWinFrame]->Draw(ourShader);
                     }
                 }
+
             }
 
             // Reiniciar juego
@@ -788,6 +886,7 @@ int main() {
                 asteroidSpawnTimer = 0.0f;
                 gameOverTimer = 0.0f;
                 rPressed = true;
+
                 // Reiniciar animación de StartScreen
                 currentStartScreenFrame = 0;
                 startScreenAnimationTimer = 0.0f;
@@ -797,6 +896,7 @@ int main() {
                 // Reiniciar animación de Win
                 currentWinFrame = 0;
                 winAnimationTimer = 0.0f;
+
 
                 // Restaurar música de juego
                 playMusic(1, true);
@@ -825,9 +925,51 @@ int main() {
             model = glm::scale(model, glm::vec3(0.1f));
             ourShader.setMat4("model", model);
             ourModel.Draw(ourShader);
+            if (isAccelerating) {
+                // TRANSFORMACIÓN DEL MODELO DE LLAMAS (al frente del carro)
+                glm::vec3 flameOffset = glm::vec3(0.0f, 0.0f, 0.00f);
+                glm::mat4 rotation = glm::rotate(glm::mat4(1.0f),
+                    glm::radians(carYaw + 180.0f),
+                    glm::vec3(0.0f, 1.0f, 0.0f));
+                glm::vec3 flamePos = carPosition + glm::vec3(rotation * glm::vec4(flameOffset, 1.0f));
+
+                glm::mat4 flameM = glm::mat4(1.0f);
+                flameM = glm::translate(flameM, flamePos);
+                flameM = glm::rotate(flameM, glm::radians(carYaw + 180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+                flameM = glm::scale(flameM, glm::vec3(0.1f));
+
+                flamaShader.use();
+                flamaShader.setMat4("projection", projection);
+                flamaShader.setMat4("view", view);
+                flamaShader.setMat4("model", flameM);
+                flamaShader.setFloat("time", glfwGetTime());
+
+                // DIBUJAR LLAMAS CON EL SHADER CORRECTO
+          
+
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, azulTextureID); // Azul.png
+                flamaShader.setInt("glowTexture", 0);
+
+                glActiveTexture(GL_TEXTURE1);
+                glBindTexture(GL_TEXTURE_2D, turquesaTextureID); // Turquesa.png
+                flamaShader.setInt("highlightTexture", 1);
+
+                glActiveTexture(GL_TEXTURE2);
+                glBindTexture(GL_TEXTURE_2D, celesteTextureID); // Celeste.png
+                flamaShader.setInt("baseTexture", 2);
+             
+                ourShader.use();
+                ourShader.setMat4("model", flameM);
+                flamesModel.Draw(ourShader);
+
+                // Restaurar shader principal
+                ourShader.use();
+            }
+
         }
 
-        glm::vec3 galactusPos = glm::vec3(0.0f, -96.0f, -90.0f);
+        glm::vec3 galactusPos = glm::vec3(0.0f, -96.0f, -90.0f); //coordenadas del galactus 
 
         glm::mat4 gBody = glm::mat4(1.0f);
         gBody = glm::translate(gBody, galactusPos);
@@ -847,6 +989,27 @@ int main() {
         gHead = glm::rotate(gHead, glm::radians(headRotationAngle), glm::vec3(0.0f, 1.0f, 0.0f));
         ourShader.setMat4("model", gHead);
         galactusHeadModel.Draw(ourShader);
+
+        // Dibujar ojitos de Galactus  
+        glm::vec3 galactusEyesPos = galactusPos + glm::vec3(0.0f, 20.0f, 0.0f);
+
+        glm::mat4 gEyes = glm::translate(gBody, glm::vec3(0.0f));
+        headRotationAngle += headRotationSpeed * deltaTime;
+        if (abs(headRotationAngle) >= headRotationLimit) {
+            headRotationSpeed *= -1;
+            headRotationAngle = glm::clamp(headRotationAngle, -headRotationLimit, headRotationLimit);
+        }
+        gEyes = glm::rotate(gEyes, glm::radians(headRotationAngle), glm::vec3(0.0f, 1.0f, 0.0f));
+
+        ojitosShader.use();
+        ojitosShader.setFloat("time", glfwGetTime());
+        ojitosShader.setMat4("projection", projection);
+        ojitosShader.setMat4("view", view);
+        gEyes = glm::translate(gEyes, glm::vec3(0.001f, 0.0f, 0.0f));  // puedes ajustar el valor
+        ojitosShader.setMat4("model", gEyes);
+        galactusOjitosModel.Draw(ojitosShader);
+
+        ourShader.use();
 
         // Punto de colisión invisible delante de Galactus
         glm::vec3 winTriggerPos = glm::vec3(0.0f, 0.0f, -85);
@@ -871,20 +1034,57 @@ int main() {
 
         for (Asteroid& ast : asteroids) {
             ast.position.z += ast.speed * deltaTime;
+
             glm::mat4 asteroidM = glm::mat4(1.0f);
             asteroidM = glm::translate(asteroidM, ast.position);
             asteroidM = glm::scale(asteroidM, glm::vec3(0.007f));
-            ourShader.setMat4("model", asteroidM);
-            asteroidModel.Draw(ourShader);
+
+            flashlightShader.use();
+            flashlightShader.setMat4("projection", projection);
+            flashlightShader.setMat4("view", view);
+            flashlightShader.setMat4("model", asteroidM);
+
+            flashlightShader.setVec3("viewPos", camera.Position);
+            flashlightShader.setVec3("light.position", carPosition + glm::vec3(0.0f, 0.2f, -0.5f)); // delante del carro
+            flashlightShader.setVec3("light.direction", carDirection);
+            flashlightShader.setFloat("light.cutOff", glm::cos(glm::radians(5.0f))); // Se puede regular el tamaño de la bolita
+
+            flashlightShader.setVec3("light.ambient", glm::vec3(0.1f));
+            flashlightShader.setVec3("light.diffuse", glm::vec3(0.8f));
+            flashlightShader.setVec3("light.specular", glm::vec3(1.0f));
+            flashlightShader.setFloat("light.constant", 1.0f);
+            flashlightShader.setFloat("light.linear", 0.09f);
+            flashlightShader.setFloat("light.quadratic", 0.032f);
+
+            asteroidModel.Draw(flashlightShader);
         }
 
         asteroids.erase(std::remove_if(asteroids.begin(), asteroids.end(),
             [](const Asteroid& a) { return a.position.z > 10.0f; }),
             asteroids.end());
 
+
+        // Setup lights
+
+        lightCubeShader.use();
+        lightCubeShader.setMat4("view", view);
+        lightCubeShader.setMat4("projection", projection);
+
+        glBindVertexArray(cubeVAO);
+        for (int i = 0; i < NR_POINT_LIGHTS; i++) {
+            glm::mat4 modelLight = glm::mat4(1.0f);
+            modelLight = glm::translate(modelLight, pointLightPositions[i]);
+            modelLight = glm::scale(modelLight, glm::vec3(2.5f)); // cubo más pequeño
+            lightCubeShader.setMat4("model", modelLight);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
+        glBindVertexArray(0);
+
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
+
 
     // Limpiar memoria de los frames de StartScreen
     for (Model* model : startScreenFrames) {
@@ -927,6 +1127,7 @@ int main() {
     if (logoModel != nullptr) {
         delete logoModel;
     }
+
 
     glfwTerminate();
     return 0;
@@ -979,3 +1180,42 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
     camera.ProcessMouseScroll(yoffset);
 }
+
+unsigned int loadTexture(const char* path)
+{
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+
+    int width, height, nrComponents;
+    unsigned char* data = stbi_load(path, &width, &height, &nrComponents, 0);
+    if (data)
+    {
+        GLenum format;
+        if (nrComponents == 1)
+            format = GL_RED;
+        else if (nrComponents == 3)
+            format = GL_RGB;
+        else if (nrComponents == 4)
+            format = GL_RGBA;
+
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0,
+            format, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);  // o GL_CLAMP_TO_EDGE si prefieres
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        stbi_image_free(data);
+    }
+    else
+    {
+        std::cout << "❌ Error al cargar textura en la ruta: " << path << std::endl;
+        stbi_image_free(data);
+    }
+
+    return textureID;
+}
+

@@ -22,6 +22,9 @@
     <Filter Include="Archivos de origen\models">
       <UniqueIdentifier>{5b7e588a-56b7-4def-9614-a70ab36a5525}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Archivos de origen\audio">
+      <UniqueIdentifier>{3f25efd0-435e-44b1-9f60-dd0369d84ab2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\OpenGL_Stuff\Library\glad.c">
@@ -36,6 +39,30 @@
       <Filter>Archivos de origen\shaders</Filter>
     </None>
     <None Include="shaders\shader_exercise16_mloading.vs">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
+    <None Include="shaders\shader_exercise15_lightcube.fs">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
+    <None Include="shaders\shader_exercise15_lightcube.vs">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
+    <None Include="shaders\shader_exercise9t5.fs">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
+    <None Include="shaders\shader_exercise9t5.vs">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
+    <None Include="shaders\shader_flama.fs">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
+    <None Include="shaders\shader_flama.vs">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
+    <None Include="shaders\shader_flashlight.fs">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
+    <None Include="shaders\shader_flashlight.vs">
       <Filter>Archivos de origen\shaders</Filter>
     </None>
   </ItemGroup>
