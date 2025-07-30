@@ -67,6 +67,7 @@ float headRotationAngle = 0.0f;
 float headRotationSpeed = 5.0f;
 float headRotationLimit = 20.0f;
 
+// PANTALLAS ANIMADAS COMENTADAS - Descomenta para usar las animaciones completas
 
 // Variables para animación de StartScreen en pantalla de inicio
 std::vector<Model*> startScreenFrames;
@@ -113,27 +114,6 @@ ALuint winSoundBuffer = 0;
 ALuint loseSoundBuffer = 0;
 float gameEndDelay = 1.5f; // 1.5 segundos de retraso
 bool endSoundPlayed = false;
-
-// Texturas para las pantallas iniciales
-unsigned int studioTexture, logoTexture;
-
-// Sonidos iniciales
-ALuint studioSoundBuffer;
-ALuint logoSoundBuffer;
-ALuint studioSoundSource;
-ALuint logoSoundSource;
-
-// Variables de control para las pantallas iniciales
-bool showStudio = true;
-bool showLogo = false;
-float studioTimer = 0.0f;
-float logoTimer = 0.0f;
-float logoStartTime = 0.0f; // Nuevo: para rastrear cuándo empezó logo
-
-// Variables para modelos de pantallas iniciales
-Model* studioModel = nullptr;
-Model* logoModel = nullptr;
-
 
 bool LoadWavFile(const char* filename, std::vector<char>& buffer, ALenum& format, ALsizei& freq) {
     std::ifstream file(filename, std::ios::binary);
@@ -238,40 +218,6 @@ void playEndGameSound(bool won) {
     alSourcef(source, AL_GAIN, 0.8f);
     alSourcePlay(source);
 }
-//Funcion para cargar texturas
-unsigned int loadTexture(const char* path) {
-    unsigned int textureID;
-    glGenTextures(1, &textureID);
-
-    int width, height, nrComponents;
-    unsigned char* data = stbi_load(path, &width, &height, &nrComponents, 0);
-    if (data) {
-        GLenum format;
-        if (nrComponents == 1)
-            format = GL_RED;
-        else if (nrComponents == 3)
-            format = GL_RGB;
-        else if (nrComponents == 4)
-            format = GL_RGBA;
-
-        glBindTexture(GL_TEXTURE_2D, textureID);
-        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-        stbi_image_free(data);
-    }
-    else {
-        std::cout << "Texture failed to load at path: " << path << std::endl;
-        stbi_image_free(data);
-    }
-
-    return textureID;
-}
 
 std::vector<Asteroid> asteroids;
 float asteroidSpawnTimer = 0.0f;
@@ -329,7 +275,7 @@ int main() {
     Shader ourShader("shaders/shader_exercise16_mloading.vs", "shaders/shader_exercise16_mloading.fs");
     Shader ojitosShader("shaders/shader_exercise9t5.vs", "shaders/shader_exercise9t5.fs");
     Shader flashlightShader("shaders/shader_flashlight.vs", "shaders/shader_flashlight.fs");
-	Shader flamaShader("shaders/shader_flama.vs", "shaders/shader_flama.fs");
+    Shader flamaShader("shaders/shader_flama.vs", "shaders/shader_flama.fs");
 
     // Carga de modelos
 
@@ -339,9 +285,9 @@ int main() {
     Model galactusModel("models/Galactus/GalactusCuerpo.obj");
     Model galactusHeadModel("models/Galactus/GalactusCabeza.obj");
     Model galactusOjitosModel("models/ojitos/ojitos2.obj");
-    Model flamesModel("models/flama/flamaAzul.obj"); 
+    Model flamesModel("models/flama/flamaAzul.obj");
 
-    #define NR_POINT_LIGHTS 10000
+#define NR_POINT_LIGHTS 10000
     glm::vec3 pointLightPositions[NR_POINT_LIGHTS];
 
     for (int i = 0; i < NR_POINT_LIGHTS; i++) {
@@ -408,25 +354,6 @@ int main() {
 
 
 
-
-    // Cargar modelos de pantallas iniciales
-    try {
-        studioModel = new Model("models/initialScreens/studio.obj");
-        std::cout << "Modelo studio.obj cargado exitosamente" << std::endl;
-    }
-    catch (...) {
-        std::cout << "Error cargando modelo studio.obj" << std::endl;
-    }
-
-    try {
-        logoModel = new Model("models/initialScreens/logo.obj");
-        std::cout << "Modelo logo.obj cargado exitosamente" << std::endl;
-    }
-    catch (...) {
-        std::cout << "Error cargando modelo logo.obj" << std::endl;
-    }
-
-
     // Cargar frames de animación de StartScreen para pantalla de inicio
     startScreenFrames.resize(20);
     for (int i = 0; i < 20; i++) {
@@ -469,6 +396,7 @@ int main() {
         }
     }
 
+
     //Música
     // Inicialización OpenAL
     audioDevice = alcOpenDevice(nullptr);
@@ -490,39 +418,6 @@ int main() {
         "audio/Lose.wav",
         "audio/Win.wav"
     };
-    // Cargar sonidos iniciales
-    std::vector<char> studioSoundData, logoSoundData;
-    ALenum studioFormat, logoFormat;
-    ALsizei studioFreq, logoFreq;
-
-    // Cargar sonido de studio (gato.wav)
-    if (!LoadWavFile("audio/gato.wav", studioSoundData, studioFormat, studioFreq)) {
-        std::cout << "Error cargando sonido de studio (gato.wav)" << std::endl;
-        studioSoundBuffer = 0;
-    }
-    else {
-        alGenBuffers(1, &studioSoundBuffer);
-        alBufferData(studioSoundBuffer, studioFormat, studioSoundData.data(),
-            (ALsizei)studioSoundData.size(), studioFreq);
-        alGenSources(1, &studioSoundSource);
-        alSourcef(studioSoundSource, AL_GAIN, 5.0f);
-        std::cout << "Sonido studio (gato.wav) cargado exitosamente" << std::endl;
-    }
-
-
-    // Cargar sonido de logo (intro.wav)
-    if (!LoadWavFile("audio/intro.wav", logoSoundData, logoFormat, logoFreq)) {
-        std::cout << "Error cargando sonido de logo (intro.wav)" << std::endl;
-        logoSoundBuffer = 0;
-    }
-    else {
-        alGenBuffers(1, &logoSoundBuffer);
-        alBufferData(logoSoundBuffer, logoFormat, logoSoundData.data(),
-            (ALsizei)logoSoundData.size(), logoFreq);
-        alGenSources(1, &logoSoundSource);
-        alSourcef(logoSoundSource, AL_GAIN, 0.2f); // Ajustar ganancia
-        std::cout << "Sonido logo (intro.wav) cargado exitosamente" << std::endl;
-    }
 
     for (int i = 0; i < 4; i++) {
         std::vector<char> bufferData;
@@ -594,15 +489,10 @@ int main() {
     }
 
 
-    // Inicializar el tiempo base
-    float startTime = glfwGetTime();
-=======
-
     //Render loop ---------------------------------------------------------------------
-    unsigned int azulTextureID = loadTexture("flama/Azul.png");
-    unsigned int turquesaTextureID = loadTexture("flama/Turquesa.png");
-    unsigned int celesteTextureID = loadTexture("flama/Celeste.png");
-
+    unsigned int azulTextureID = loadTexture("models/flama/Azul.png");
+    unsigned int turquesaTextureID = loadTexture("models/flama/Turquesa.png");
+    unsigned int celesteTextureID = loadTexture("models/flama/Celeste.png");
 
 
 
@@ -625,120 +515,6 @@ int main() {
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", view);
 
-        // 1. Pantalla Studio
-        if (showStudio) {
-            // Calcular timer relativo al inicio del programa
-            float currentTime = glfwGetTime() - startTime;
-            studioTimer = currentTime;
-            std::cout << "Pantalla studio activa, timer: " << studioTimer << std::endl;
-
-            // Configurar cámara para pantalla studio
-            camera.Position = glm::vec3(0.0f, 0.75f, 1.3f);
-            camera.Front = glm::normalize(glm::vec3(0.0f, 0.0f, -1.0f));
-
-            // Actualizar matrices de vista y proyección
-            glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 200.0f);
-            glm::mat4 view = camera.GetViewMatrix();
-            ourShader.setMat4("projection", projection);
-            ourShader.setMat4("view", view);
-
-            // Reproducir sonido solo al inicio
-            if (studioTimer >= 0.1f && studioTimer <= 0.2f && studioSoundBuffer != 0) {
-                alSourcei(studioSoundSource, AL_BUFFER, studioSoundBuffer);
-                alSourcePlay(studioSoundSource);
-                std::cout << "Reproduciendo sonido de studio" << std::endl;
-            }
-
-            // Dibujar fondo nebula
-            glm::mat4 nebulaM = glm::mat4(1.0f);
-            nebulaM = glm::translate(nebulaM, glm::vec3(0.0f, 0.0f, 0.0f));
-            nebulaM = glm::scale(nebulaM, glm::vec3(150.0f, 150.0f, 150.0f));
-            ourShader.setMat4("model", nebulaM);
-            nebulaModel.Draw(ourShader);
-
-            // Dibujar pantalla studio
-            if (studioModel != nullptr) {
-                std::cout << "Dibujando modelo studio" << std::endl;
-                glm::mat4 model = glm::mat4(1.0f);
-                model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-                model = glm::scale(model, glm::vec3(0.5f));
-                ourShader.setMat4("model", model);
-                studioModel->Draw(ourShader);
-            }
-            else {
-                std::cout << "studioModel es nullptr!" << std::endl;
-            }
-
-            // Pasar a pantalla logo después de 10 segundos
-            if (studioTimer >= 10.0f) {
-                showStudio = false;
-                showLogo = true;
-                logoStartTime = glfwGetTime(); // Guardar cuando empezó logo
-                logoTimer = 0.0f;
-                std::cout << "Cambiando a pantalla logo" << std::endl;
-            }
-
-            glfwSwapBuffers(window);
-            glfwPollEvents();
-            continue; // IMPORTANTE: Saltar el resto del bucle
-        }
-
-        // 2. Pantalla Logo
-        if (showLogo) {
-            // Calcular timer relativo al inicio de la pantalla logo
-            logoTimer = glfwGetTime() - logoStartTime;
-            std::cout << "Pantalla logo activa, timer: " << logoTimer << std::endl;
-
-            // Configurar cámara para pantalla logo
-            camera.Position = glm::vec3(0.0f, 0.75f, 1.3f);
-            camera.Front = glm::normalize(glm::vec3(0.0f, 0.0f, -1.0f));
-
-            // Actualizar matrices de vista y proyección
-            glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 200.0f);
-            glm::mat4 view = camera.GetViewMatrix();
-            ourShader.setMat4("projection", projection);
-            ourShader.setMat4("view", view);
-
-            // Reproducir sonido solo al inicio
-            if (logoTimer >= 0.1f && logoTimer <= 0.2f && logoSoundBuffer != 0) {
-                alSourcei(logoSoundSource, AL_BUFFER, logoSoundBuffer);
-                alSourcePlay(logoSoundSource);
-                std::cout << "Reproduciendo sonido de logo" << std::endl;
-            }
-
-            // Dibujar fondo nebula
-            glm::mat4 nebulaM = glm::mat4(1.0f);
-            nebulaM = glm::translate(nebulaM, glm::vec3(0.0f, 0.0f, 0.0f));
-            nebulaM = glm::scale(nebulaM, glm::vec3(150.0f, 150.0f, 150.0f));
-            ourShader.setMat4("model", nebulaM);
-            nebulaModel.Draw(ourShader);
-
-            // Dibujar pantalla logo
-            if (logoModel != nullptr) {
-                std::cout << "Dibujando modelo logo" << std::endl;
-                glm::mat4 model = glm::mat4(1.0f);
-                model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-                model = glm::scale(model, glm::vec3(0.5f));
-                ourShader.setMat4("model", model);
-                logoModel->Draw(ourShader);
-            }
-            else {
-                std::cout << "logoModel es nullptr!" << std::endl;
-            }
-
-            // Pasar a StartScreen después de 25 segundos
-            if (logoTimer >= 25.0f) {
-                showLogo = false;
-                logoTimer = 0.0f;
-                std::cout << "Cambiando a StartScreen" << std::endl;
-            }
-
-            glfwSwapBuffers(window);
-            glfwPollEvents();
-            continue; // IMPORTANTE: Saltar el resto del bucle
-        }
-
-        // Ahora dibuja la nebula para el resto de estados del juego
         glm::mat4 nebulaM = glm::mat4(1.0f);
         nebulaM = glm::translate(nebulaM, glm::vec3(0.0f, 0.0f, 0.0f));
         nebulaM = glm::scale(nebulaM, glm::vec3(150.0f, 150.0f, 150.0f));
@@ -783,6 +559,8 @@ int main() {
             camera.Front = glm::normalize(glm::vec3(0.0f, 0.0f, -1.0f));
 
 
+
+
             // Animación de StartScreen en pantalla de inicio
             startScreenAnimationTimer += deltaTime;
             float frameTime = 1.0f / startScreenFrameRate;
@@ -813,8 +591,7 @@ int main() {
         }
 
 
-        // En el bucle principal, reemplaza los dos bloques de gameOver/win por este único bloque:
-
+        // PANTALLAS DE FINAL SIMPLIFICADAS
         if (gameOver || win) {
             gameOverTimer += deltaTime;
 
@@ -830,9 +607,11 @@ int main() {
                 }
             }
 
+            // Mostrar pantalla después del retraso 
             if (gameOverTimer >= gameEndDelay) {
                 camera.Position = glm::vec3(0.0f, 0.75f, 1.3f);
                 camera.Front = glm::normalize(glm::vec3(0.0f, 0.0f, -1.0f));
+
 
 
                 if (gameOver) {
@@ -886,6 +665,7 @@ int main() {
                 asteroidSpawnTimer = 0.0f;
                 gameOverTimer = 0.0f;
                 rPressed = true;
+
 
                 // Reiniciar animación de StartScreen
                 currentStartScreenFrame = 0;
@@ -945,7 +725,7 @@ int main() {
                 flamaShader.setFloat("time", glfwGetTime());
 
                 // DIBUJAR LLAMAS CON EL SHADER CORRECTO
-          
+
 
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_2D, azulTextureID); // Azul.png
@@ -958,7 +738,7 @@ int main() {
                 glActiveTexture(GL_TEXTURE2);
                 glBindTexture(GL_TEXTURE_2D, celesteTextureID); // Celeste.png
                 flamaShader.setInt("baseTexture", 2);
-             
+
                 ourShader.use();
                 ourShader.setMat4("model", flameM);
                 flamesModel.Draw(ourShader);
@@ -1110,24 +890,6 @@ int main() {
     }
     winFrames.clear();
 
-    // Limpiar recursos de audio
-    if (studioSoundBuffer != 0) {
-        alDeleteBuffers(1, &studioSoundBuffer);
-        alDeleteSources(1, &studioSoundSource);
-    }
-    if (logoSoundBuffer != 0) {
-        alDeleteBuffers(1, &logoSoundBuffer);
-        alDeleteSources(1, &logoSoundSource);
-    }
-
-    // Limpiar modelos de pantallas iniciales
-    if (studioModel != nullptr) {
-        delete studioModel;
-    }
-    if (logoModel != nullptr) {
-        delete logoModel;
-    }
-
 
     glfwTerminate();
     return 0;
@@ -1151,7 +913,7 @@ void processInput(GLFWwindow* window) {
 
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS && !dPressed) {
         if (currentLane < 2) currentLane++;
-        playDodgeSound(); // Reproducir sonido al esquivar a la izquierda
+        playDodgeSound(); // Reproducir sonido al esquivar a la derecha
         dPressed = true;
     }
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_RELEASE) dPressed = false;
@@ -1180,7 +942,6 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
     camera.ProcessMouseScroll(yoffset);
 }
-
 unsigned int loadTexture(const char* path)
 {
     unsigned int textureID;
@@ -1218,4 +979,3 @@ unsigned int loadTexture(const char* path)
 
     return textureID;
 }
-
