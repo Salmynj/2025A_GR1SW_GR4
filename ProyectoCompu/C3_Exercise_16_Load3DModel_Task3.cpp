@@ -273,6 +273,8 @@ int main() {
     Shader lightCubeShader("shaders/shader_exercise15_lightcube.vs", "shaders/shader_exercise15_lightcube.fs");
     Shader ourShader("shaders/shader_exercise16_mloading.vs", "shaders/shader_exercise16_mloading.fs");
     Shader ojitosShader("shaders/shader_exercise9t5.vs", "shaders/shader_exercise9t5.fs");
+    Shader flashlightShader("shaders/shader_flashlight.vs", "shaders/shader_flashlight.fs");
+
 
     Model nebulaModel("models/nebula/nebula.obj");
     Model ourModel("models/FantastiCar+Herbie/FantastiCar+Herbie.obj");
@@ -779,11 +781,29 @@ int main() {
 
         for (Asteroid& ast : asteroids) {
             ast.position.z += ast.speed * deltaTime;
+
             glm::mat4 asteroidM = glm::mat4(1.0f);
             asteroidM = glm::translate(asteroidM, ast.position);
             asteroidM = glm::scale(asteroidM, glm::vec3(0.007f));
-            ourShader.setMat4("model", asteroidM);
-            asteroidModel.Draw(ourShader);
+
+            flashlightShader.use();
+            flashlightShader.setMat4("projection", projection);
+            flashlightShader.setMat4("view", view);
+            flashlightShader.setMat4("model", asteroidM);
+
+            flashlightShader.setVec3("viewPos", camera.Position);
+            flashlightShader.setVec3("light.position", carPosition + glm::vec3(0.0f, 0.2f, -0.5f)); // delante del carro
+            flashlightShader.setVec3("light.direction", carDirection);
+            flashlightShader.setFloat("light.cutOff", glm::cos(glm::radians(5.0f)));
+
+            flashlightShader.setVec3("light.ambient", glm::vec3(0.1f));
+            flashlightShader.setVec3("light.diffuse", glm::vec3(0.8f));
+            flashlightShader.setVec3("light.specular", glm::vec3(1.0f));
+            flashlightShader.setFloat("light.constant", 1.0f);
+            flashlightShader.setFloat("light.linear", 0.09f);
+            flashlightShader.setFloat("light.quadratic", 0.032f);
+
+            asteroidModel.Draw(flashlightShader);
         }
 
         asteroids.erase(std::remove_if(asteroids.begin(), asteroids.end(),
