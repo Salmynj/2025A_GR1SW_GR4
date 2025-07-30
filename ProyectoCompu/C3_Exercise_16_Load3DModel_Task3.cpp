@@ -274,7 +274,9 @@ int main() {
     Shader ourShader("shaders/shader_exercise16_mloading.vs", "shaders/shader_exercise16_mloading.fs");
     Shader ojitosShader("shaders/shader_exercise9t5.vs", "shaders/shader_exercise9t5.fs");
     Shader flashlightShader("shaders/shader_flashlight.vs", "shaders/shader_flashlight.fs");
+	Shader flamaShader("shaders/shader_flama.vs", "shaders/shader_flama.fs");
 
+    // Carga de modelos
 
     Model nebulaModel("models/nebula/nebula.obj");
     Model ourModel("models/FantastiCar+Herbie/FantastiCar+Herbie.obj");
@@ -282,8 +284,9 @@ int main() {
     Model galactusModel("models/Galactus/GalactusCuerpo.obj");
     Model galactusHeadModel("models/Galactus/GalactusCabeza.obj");
     Model galactusOjitosModel("models/ojitos/ojitos2.obj");
+    Model flamesModel("models/flama/flamaAzul.obj"); 
 
-#define NR_POINT_LIGHTS 10000
+    #define NR_POINT_LIGHTS 10000
     glm::vec3 pointLightPositions[NR_POINT_LIGHTS];
 
     for (int i = 0; i < NR_POINT_LIGHTS; i++) {
@@ -705,8 +708,6 @@ int main() {
         camera.Position = cameraTargetPos;
         camera.Front = glm::normalize((carPosition + glm::vec3(0.0f, 0.3f, -1.2f)) - camera.Position);
 
-
-
         if (!win) {
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::translate(model, carPosition);
@@ -714,6 +715,38 @@ int main() {
             model = glm::scale(model, glm::vec3(0.1f));
             ourShader.setMat4("model", model);
             ourModel.Draw(ourShader);
+            if (isAccelerating) {
+                // TRANSFORMACIÓN DEL MODELO DE LLAMAS (al frente del carro)
+                glm::vec3 flameOffset = glm::vec3(0.0f, 0.0f, 0.00f);
+                glm::mat4 rotation = glm::rotate(glm::mat4(1.0f),
+                    glm::radians(carYaw + 180.0f),
+                    glm::vec3(0.0f, 1.0f, 0.0f));
+                glm::vec3 flamePos = carPosition + glm::vec3(rotation * glm::vec4(flameOffset, 1.0f));
+
+                glm::mat4 flameM = glm::mat4(1.0f);
+                flameM = glm::translate(flameM, flamePos);
+                flameM = glm::rotate(flameM, glm::radians(carYaw + 180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+                flameM = glm::scale(flameM, glm::vec3(0.1f));
+
+                // DIBUJAR LLAMAS CON EL SHADER CORRECTO
+                ourShader.use();
+                ourShader.setMat4("model", flameM);
+                flamesModel.Draw(ourShader);
+
+                // LUZ SOBRE LAS LLAMAS
+                flamaShader.use();
+                flamaShader.setMat4("projection", projection);
+                flamaShader.setMat4("view", view);
+                flamaShader.setVec3("viewPos", camera.Position);
+
+                glm::vec3 flameLightPos = flamePos + glm::vec3(0.0f, 0.3f, 0.0f);
+
+
+
+                // Restaurar shader principal
+                ourShader.use();
+            }
+
         }
 
         glm::vec3 galactusPos = glm::vec3(0.0f, -96.0f, -90.0f); //coordenadas del galactus 
@@ -794,7 +827,7 @@ int main() {
             flashlightShader.setVec3("viewPos", camera.Position);
             flashlightShader.setVec3("light.position", carPosition + glm::vec3(0.0f, 0.2f, -0.5f)); // delante del carro
             flashlightShader.setVec3("light.direction", carDirection);
-            flashlightShader.setFloat("light.cutOff", glm::cos(glm::radians(5.0f)));
+            flashlightShader.setFloat("light.cutOff", glm::cos(glm::radians(5.0f))); // Se puede regular el tamaño de la bolita
 
             flashlightShader.setVec3("light.ambient", glm::vec3(0.1f));
             flashlightShader.setVec3("light.diffuse", glm::vec3(0.8f));
