@@ -245,7 +245,7 @@ int main() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-#ifdef __APPLE__
+#ifdef _APPLE_
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
@@ -272,14 +272,16 @@ int main() {
 
     Shader lightCubeShader("shaders/shader_exercise15_lightcube.vs", "shaders/shader_exercise15_lightcube.fs");
     Shader ourShader("shaders/shader_exercise16_mloading.vs", "shaders/shader_exercise16_mloading.fs");
+    Shader ojitosShader("shaders/shader_exercise9t5.vs", "shaders/shader_exercise9t5.fs");
 
     Model nebulaModel("models/nebula/nebula.obj");
     Model ourModel("models/FantastiCar+Herbie/FantastiCar+Herbie.obj");
     Model asteroidModel("models/asteroid/asteroid01.obj");
     Model galactusModel("models/Galactus/GalactusCuerpo.obj");
     Model galactusHeadModel("models/Galactus/GalactusCabeza.obj");
-    
-    #define NR_POINT_LIGHTS 10000
+    Model galactusOjitosModel("models/ojitos/ojitos2.obj");
+
+#define NR_POINT_LIGHTS 10000
     glm::vec3 pointLightPositions[NR_POINT_LIGHTS];
 
     for (int i = 0; i < NR_POINT_LIGHTS; i++) {
@@ -498,7 +500,8 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         ourShader.use();
-        ourShader.setFloat("time", glfwGetTime());
+        //ourShader.setFloat("time", glfwGetTime());
+        ojitosShader.setFloat("time", glfwGetTime());
 
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / SCR_HEIGHT, 0.1f, 200.0f);
         glm::mat4 view = camera.GetViewMatrix();
@@ -700,7 +703,7 @@ int main() {
         camera.Position = cameraTargetPos;
         camera.Front = glm::normalize((carPosition + glm::vec3(0.0f, 0.3f, -1.2f)) - camera.Position);
 
-      
+
 
         if (!win) {
             glm::mat4 model = glm::mat4(1.0f);
@@ -731,6 +734,27 @@ int main() {
         gHead = glm::rotate(gHead, glm::radians(headRotationAngle), glm::vec3(0.0f, 1.0f, 0.0f));
         ourShader.setMat4("model", gHead);
         galactusHeadModel.Draw(ourShader);
+
+        // Dibujar ojitos de Galactus  
+        glm::vec3 galactusEyesPos = galactusPos + glm::vec3(0.0f, 20.0f, 0.0f);
+
+        glm::mat4 gEyes = glm::translate(gBody, glm::vec3(0.0f));
+        headRotationAngle += headRotationSpeed * deltaTime;
+        if (abs(headRotationAngle) >= headRotationLimit) {
+            headRotationSpeed *= -1;
+            headRotationAngle = glm::clamp(headRotationAngle, -headRotationLimit, headRotationLimit);
+        }
+        gEyes = glm::rotate(gEyes, glm::radians(headRotationAngle), glm::vec3(0.0f, 1.0f, 0.0f));
+
+        ojitosShader.use();
+        ojitosShader.setFloat("time", glfwGetTime());
+        ojitosShader.setMat4("projection", projection);
+        ojitosShader.setMat4("view", view);
+        gEyes = glm::translate(gEyes, glm::vec3(0.001f, 0.0f, 0.0f));  // puedes ajustar el valor
+        ojitosShader.setMat4("model", gEyes);
+        galactusOjitosModel.Draw(ojitosShader);
+
+        ourShader.use();
 
         // Punto de colisión invisible delante de Galactus
         glm::vec3 winTriggerPos = glm::vec3(0.0f, 0.0f, -85);
@@ -782,7 +806,7 @@ int main() {
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
         glBindVertexArray(0);
-        
+
 
         glfwSwapBuffers(window);
         glfwPollEvents();
