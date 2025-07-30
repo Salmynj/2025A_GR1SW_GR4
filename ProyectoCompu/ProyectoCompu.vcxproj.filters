@@ -47,5 +47,23 @@
     <None Include="shaders\shader_exercise15_lightcube.vs">
       <Filter>Archivos de origen\shaders</Filter>
     </None>
+    <None Include="shaders\shader_exercise9t5.fs">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
+    <None Include="shaders\shader_exercise9t5.vs">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
+    <None Include="shaders\shader_flama.fs">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
+    <None Include="shaders\shader_flama.vs">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
+    <None Include="shaders\shader_flashlight.fs">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
+    <None Include="shaders\shader_flashlight.vs">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -137,10 +137,26 @@
     <ClCompile Include="C3_Exercise_16_Load3DModel_Task3.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\shader_exercise15_lightcube.fs" />
+    <None Include="shaders\shader_exercise15_lightcube.fs">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </None>
     <None Include="shaders\shader_exercise15_lightcube.vs" />
-    <None Include="shaders\shader_exercise16_mloading.fs" />
+    <None Include="shaders\shader_exercise16_mloading.fs">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </None>
     <None Include="shaders\shader_exercise16_mloading.vs" />
+    <None Include="shaders\shader_exercise9t5.fs">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </None>
+    <None Include="shaders\shader_exercise9t5.vs" />
+    <None Include="shaders\shader_flama.fs">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </None>
+    <None Include="shaders\shader_flama.vs" />
+    <None Include="shaders\shader_flashlight.fs">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+    </None>
+    <None Include="shaders\shader_flashlight.vs" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

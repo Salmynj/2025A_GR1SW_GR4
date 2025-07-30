@@ -35,6 +35,7 @@ void playMusic(int musicIndex, bool loop);
 void stopMusic();
 void updateAudio();
 
+unsigned int loadTexture(const char* path); //función para cargar las texturas 
 
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
@@ -491,6 +492,9 @@ int main() {
 
 
     //Render loop ---------------------------------------------------------------------
+    unsigned int azulTextureID = loadTexture("flama/Azul.png");
+    unsigned int turquesaTextureID = loadTexture("flama/Turquesa.png");
+    unsigned int celesteTextureID = loadTexture("flama/Celeste.png");
 
 
 
@@ -728,20 +732,30 @@ int main() {
                 flameM = glm::rotate(flameM, glm::radians(carYaw + 180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
                 flameM = glm::scale(flameM, glm::vec3(0.1f));
 
-                // DIBUJAR LLAMAS CON EL SHADER CORRECTO
-                ourShader.use();
-                ourShader.setMat4("model", flameM);
-                flamesModel.Draw(ourShader);
-
-                // LUZ SOBRE LAS LLAMAS
                 flamaShader.use();
                 flamaShader.setMat4("projection", projection);
                 flamaShader.setMat4("view", view);
-                flamaShader.setVec3("viewPos", camera.Position);
+                flamaShader.setMat4("model", flameM);
+                flamaShader.setFloat("time", glfwGetTime());
 
-                glm::vec3 flameLightPos = flamePos + glm::vec3(0.0f, 0.3f, 0.0f);
+                // DIBUJAR LLAMAS CON EL SHADER CORRECTO
+          
 
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, azulTextureID); // Azul.png
+                flamaShader.setInt("glowTexture", 0);
 
+                glActiveTexture(GL_TEXTURE1);
+                glBindTexture(GL_TEXTURE_2D, turquesaTextureID); // Turquesa.png
+                flamaShader.setInt("highlightTexture", 1);
+
+                glActiveTexture(GL_TEXTURE2);
+                glBindTexture(GL_TEXTURE_2D, celesteTextureID); // Celeste.png
+                flamaShader.setInt("baseTexture", 2);
+             
+                ourShader.use();
+                ourShader.setMat4("model", flameM);
+                flamesModel.Draw(ourShader);
 
                 // Restaurar shader principal
                 ourShader.use();
@@ -942,4 +956,41 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
     camera.ProcessMouseScroll(yoffset);
+}
+unsigned int loadTexture(const char* path)
+{
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+
+    int width, height, nrComponents;
+    unsigned char* data = stbi_load(path, &width, &height, &nrComponents, 0);
+    if (data)
+    {
+        GLenum format;
+        if (nrComponents == 1)
+            format = GL_RED;
+        else if (nrComponents == 3)
+            format = GL_RGB;
+        else if (nrComponents == 4)
+            format = GL_RGBA;
+
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0,
+            format, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);  // o GL_CLAMP_TO_EDGE si prefieres
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        stbi_image_free(data);
+    }
+    else
+    {
+        std::cout << "❌ Error al cargar textura en la ruta: " << path << std::endl;
+        stbi_image_free(data);
+    }
+
+    return textureID;
 }
