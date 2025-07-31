@@ -134,21 +134,21 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\OpenGL_Stuff\Library\glad.c" />
-    <ClCompile Include="C3_Exercise_16_Load3DModel_Task3.cpp" />
+    <ClCompile Include="Herbie_to_the_rescue.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\shader_exercise15_lightcube.fs">
+    <None Include="shaders\light_fs.fs">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
     </None>
-    <None Include="shaders\shader_exercise15_lightcube.vs" />
-    <None Include="shaders\shader_exercise16_mloading.fs">
+    <None Include="shaders\light_vs.vs" />
+    <None Include="shaders\loading_fs.fs">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
     </None>
-    <None Include="shaders\shader_exercise16_mloading.vs" />
-    <None Include="shaders\shader_exercise9t5.fs">
+    <None Include="shaders\loading_vs.vs" />
+    <None Include="shaders\eye_fs.fs">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
     </None>
-    <None Include="shaders\shader_exercise9t5.vs" />
+    <None Include="shaders\eye_vs.vs" />
     <None Include="shaders\shader_flama.fs">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
     </None>

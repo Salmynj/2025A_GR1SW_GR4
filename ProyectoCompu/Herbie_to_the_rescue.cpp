@@ -272,7 +272,7 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
-    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "FantastiCar", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Herbie to the Rescue", NULL, NULL);
     if (window == NULL) {
         std::cout << "Failed to create GLFW window\n";
         glfwTerminate();
@@ -293,9 +293,9 @@ int main() {
     glEnable(GL_PROGRAM_POINT_SIZE); // solo para probar si se están dibujando los puntos
     glDisable(GL_CULL_FACE);
 
-    Shader lightCubeShader("shaders/shader_exercise15_lightcube.vs", "shaders/shader_exercise15_lightcube.fs");
-    Shader ourShader("shaders/shader_exercise16_mloading.vs", "shaders/shader_exercise16_mloading.fs");
-    Shader ojitosShader("shaders/shader_exercise9t5.vs", "shaders/shader_exercise9t5.fs");
+    Shader lightCubeShader("shaders/light_vs.vs", "shaders/light_fs.fs");
+    Shader ourShader("shaders/loading_vs.vs", "shaders/loading_fs.fs");
+    Shader ojitosShader("shaders/eye_vs.vs", "shaders/eye_fs.fs");
     Shader flashlightShader("shaders/shader_flashlight.vs", "shaders/shader_flashlight.fs");
     Shader flamaShader("shaders/shader_flama.vs", "shaders/shader_flama.fs");
 

@@ -30,27 +30,27 @@
     <ClCompile Include="..\OpenGL_Stuff\Library\glad.c">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
-    <ClCompile Include="C3_Exercise_16_Load3DModel_Task3.cpp">
+    <ClCompile Include="Herbie_to_the_rescue.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\shader_exercise16_mloading.fs">
+    <None Include="shaders\loading_fs.fs">
       <Filter>Archivos de origen\shaders</Filter>
     </None>
-    <None Include="shaders\shader_exercise16_mloading.vs">
+    <None Include="shaders\loading_vs.vs">
       <Filter>Archivos de origen\shaders</Filter>
     </None>
-    <None Include="shaders\shader_exercise15_lightcube.fs">
+    <None Include="shaders\light_fs.fs">
       <Filter>Archivos de origen\shaders</Filter>
     </None>
-    <None Include="shaders\shader_exercise15_lightcube.vs">
+    <None Include="shaders\light_vs.vs">
       <Filter>Archivos de origen\shaders</Filter>
     </None>
-    <None Include="shaders\shader_exercise9t5.fs">
+    <None Include="shaders\eye_fs.fs">
       <Filter>Archivos de origen\shaders</Filter>
     </None>
-    <None Include="shaders\shader_exercise9t5.vs">
+    <None Include="shaders\eye_vs.vs">
       <Filter>Archivos de origen\shaders</Filter>
     </None>
     <None Include="shaders\shader_flama.fs">
