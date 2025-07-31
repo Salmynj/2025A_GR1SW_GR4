@@ -51,8 +51,6 @@ Convertirnos en una empresa referente en el desarrollo de videojuegos innovadore
 
 ## 🎮 Características destacadas
 
-## 🎮 Características destacadas
-
 - ✅ Renderizado 3D en tiempo real con OpenGL  
 - 🚧 Esquiva asteroides y avanza con las teclas W, A, D
 - 🧠 Galactus con animación de cabeza y ojos  
